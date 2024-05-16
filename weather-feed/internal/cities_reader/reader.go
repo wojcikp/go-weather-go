@@ -2,18 +2,20 @@ package citiesreader
 
 import (
 	"encoding/json"
+	"log"
 	"os"
+	"path"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 )
 
-type IReader interface {
+type ICityReader interface {
 	Read() ([]CityInput, error)
 }
 
-type CitiesReader struct {
-	FilePath string
-}
+type CitiesReader struct{}
+
+type CitiesReaderMock struct{}
 
 type CityInput struct {
 	City              string `json:"city,omitempty"`
@@ -27,12 +29,21 @@ type CityInput struct {
 	Population_proper string `json:"population_proper,omitempty"`
 }
 
-func NewReader(path string) *CitiesReader {
+func NewReader() *CitiesReader {
 	return &CitiesReader{}
 }
 
+func NewReaderMock() *CitiesReaderMock {
+	return &CitiesReaderMock{}
+}
+
 func (r CitiesReader) Read() ([]CityInput, error) {
-	file, err := os.ReadFile(r.FilePath)
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	p := path.Join(dir, "..", "..", "assets", "pl172.json")
+	file, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +57,17 @@ func (r CitiesReader) Read() ([]CityInput, error) {
 	return input, nil
 }
 
-func GetCitiesInput(r IReader) ([]internal.BaseCityInfo, error) {
+func (r CitiesReaderMock) Read() ([]CityInput, error) {
+	return []CityInput{
+		{"Warsaw", "52.2300", "21.0111", "Poland", "PL", "Mazowieckie", "primary", "1860281", "1860281"},
+		{"Kraków", "50.0614", "19.9372", "Poland", "PL", "Małopolskie", "admin", "800653", "800653"},
+		{"Łódź", "51.7769", "19.4547", "Poland", "PL", "Łódzkie", "admin", "690422", "670642"},
+		{"Wrocław", "51.1100", "17.0325", "Poland", "PL", "Dolnośląskie", "admin", "672929", "672929"},
+		{"Poznań", "52.4083", "16.9336", "Poland", "PL", "Wielkopolskie", "admin", "546859", "546859"},
+	}, nil
+}
+
+func GetCitiesInput(r ICityReader) ([]internal.BaseCityInfo, error) {
 	input, err := r.Read()
 	if err != nil {
 		return nil, err

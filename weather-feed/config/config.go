@@ -3,7 +3,8 @@ package config
 import "github.com/tkanos/gonfig"
 
 type Configuration struct {
-	CitiesJsonPath string
+	BaseUrl              string
+	LookBackwardInMonths int
 }
 
 func GetConfig() Configuration {
