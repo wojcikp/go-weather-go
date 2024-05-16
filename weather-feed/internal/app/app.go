@@ -1,11 +1,11 @@
 package app
 
 import (
+	"context"
 	"log"
-	"os"
-	"path"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
+	apiclient "github.com/wojcikp/go-weather-go/weather-feed/internal/api_client"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
 )
 
@@ -14,23 +14,25 @@ type IApp interface {
 }
 
 type App struct {
-	config config.Configuration
-	reader *citiesreader.CitiesReader
+	config    config.Configuration
+	reader    citiesreader.ICityReader
+	apiClient *apiclient.WeatherApiClient
 }
 
-func NewApp(config config.Configuration, reader *citiesreader.CitiesReader) *App {
-	return &App{config, reader}
+func NewApp(config config.Configuration, reader citiesreader.ICityReader, apiClient *apiclient.WeatherApiClient) *App {
+	return &App{config, reader, apiClient}
 }
 
 func (app App) Run() {
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	app.reader.FilePath = path.Join(dir, "..", "..", "assets", "pl172.json")
+	ctx := context.Background()
 	cities, err := citiesreader.GetCitiesInput(app.reader)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Print(cities)
+	data, err := app.apiClient.FetchData(ctx, cities[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print(data)
 }
