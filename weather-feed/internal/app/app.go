@@ -3,10 +3,13 @@ package app
 import (
 	"context"
 	"log"
+	"sync"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
-	apiclient "github.com/wojcikp/go-weather-go/weather-feed/internal/api_client"
+	"github.com/wojcikp/go-weather-go/weather-feed/internal"
+	apiworker "github.com/wojcikp/go-weather-go/weather-feed/internal/api_worker"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
+	"golang.org/x/sync/semaphore"
 )
 
 type IApp interface {
@@ -16,11 +19,15 @@ type IApp interface {
 type App struct {
 	config    config.Configuration
 	reader    citiesreader.ICityReader
-	apiClient *apiclient.WeatherApiClient
+	apiWorker *apiworker.ApiDataWorker
 }
 
-func NewApp(config config.Configuration, reader citiesreader.ICityReader, apiClient *apiclient.WeatherApiClient) *App {
-	return &App{config, reader, apiClient}
+func NewApp(
+	config config.Configuration,
+	reader citiesreader.ICityReader,
+	apiWorker *apiworker.ApiDataWorker,
+) *App {
+	return &App{config, reader, apiWorker}
 }
 
 func (app App) Run() {
@@ -29,10 +36,25 @@ func (app App) Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	log.Print(cities)
-	data, err := app.apiClient.FetchData(ctx, cities[0])
-	if err != nil {
-		log.Fatal(err)
+
+	wg := &sync.WaitGroup{}
+	sem := semaphore.NewWeighted(5)
+
+	for _, city := range cities {
+		wg.Add(1)
+		go func(city internal.BaseCityInfo) {
+			sem.Acquire(ctx, 1)
+			app.apiWorker.Work(ctx, city, wg, sem)
+		}(city)
 	}
-	log.Print(data)
+	log.Print(<-app.apiWorker.CityData)
+	log.Print(<-app.apiWorker.CityData)
+	log.Print(<-app.apiWorker.CityData)
+	log.Print(<-app.apiWorker.CityData)
+	log.Print(<-app.apiWorker.CityData)
+	wg.Wait()
+	close(app.apiWorker.CityData)
+	log.Print("DONE")
 }
