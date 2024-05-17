@@ -11,10 +11,6 @@ import (
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 )
 
-type IApiClient interface {
-	FetchData()
-}
-
 type Hourly struct {
 	Temperature2m []float64 `json:"temperature_2m"`
 	WeatherCode   []int     `json:"weather_code"`
