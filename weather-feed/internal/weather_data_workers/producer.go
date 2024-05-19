@@ -1,4 +1,4 @@
-package apiworker
+package weatherdataworkers
 
 import (
 	"context"
@@ -10,25 +10,24 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type ApiDataWorker struct {
+type ApiDataProducer struct {
 	apiClient apiclient.WeatherApiClient
 	CityData  chan internal.CityWeatherData
 }
 
-func NewApiDataWorker(
+func NewApiDataProducer(
 	apiClient apiclient.WeatherApiClient,
 	CityData chan internal.CityWeatherData,
-) *ApiDataWorker {
-	return &ApiDataWorker{apiClient, CityData}
+) *ApiDataProducer {
+	return &ApiDataProducer{apiClient, CityData}
 }
 
-func (w ApiDataWorker) Work(ctx context.Context, apiJob internal.BaseCityInfo, wg *sync.WaitGroup, sem *semaphore.Weighted) {
+func (w ApiDataProducer) Work(ctx context.Context, apiJob internal.BaseCityInfo, wg *sync.WaitGroup, sem *semaphore.Weighted) {
 	defer wg.Done()
 	defer sem.Release(1)
 	weatherData, err := w.apiClient.FetchData(ctx, apiJob)
 	if err != nil {
-		log.Fatal(err)
-		log.Fatalf("Data for city: %v not fetched", apiJob.Name)
+		log.Fatalf("Data for city: %s not fetched, err: %v", apiJob.Name, err)
 		w.CityData <- internal.CityWeatherData{
 			Name:         apiJob.Name,
 			Temperatures: []float64{},

@@ -7,8 +7,9 @@ import (
 
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
-	apiworker "github.com/wojcikp/go-weather-go/weather-feed/internal/api_worker"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
+	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_client"
+	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -17,17 +18,21 @@ type IApp interface {
 }
 
 type App struct {
-	config    config.Configuration
-	reader    citiesreader.ICityReader
-	apiWorker *apiworker.ApiDataWorker
+	config       config.Configuration
+	reader       citiesreader.ICityReader
+	rabbitClient *rabbitmqclient.RabbitClient
+	producer     *weatherdataworkers.ApiDataProducer
+	consumer     *weatherdataworkers.Consumer
 }
 
 func NewApp(
 	config config.Configuration,
 	reader citiesreader.ICityReader,
-	apiWorker *apiworker.ApiDataWorker,
+	rabbitClient *rabbitmqclient.RabbitClient,
+	producer *weatherdataworkers.ApiDataProducer,
+	consumer *weatherdataworkers.Consumer,
 ) *App {
-	return &App{config, reader, apiWorker}
+	return &App{config, reader, rabbitClient, producer, consumer}
 }
 
 func (app App) Run() {
@@ -37,24 +42,24 @@ func (app App) Run() {
 		log.Fatal(err)
 	}
 
-	log.Print(cities)
-
-	wg := &sync.WaitGroup{}
+	wgp := &sync.WaitGroup{}
 	sem := semaphore.NewWeighted(5)
-
 	for _, city := range cities {
-		wg.Add(1)
+		wgp.Add(1)
 		go func(city internal.BaseCityInfo) {
 			sem.Acquire(ctx, 1)
-			app.apiWorker.Work(ctx, city, wg, sem)
+			app.producer.Work(ctx, city, wgp, sem)
 		}(city)
 	}
-	log.Print(<-app.apiWorker.CityData)
-	log.Print(<-app.apiWorker.CityData)
-	log.Print(<-app.apiWorker.CityData)
-	log.Print(<-app.apiWorker.CityData)
-	log.Print(<-app.apiWorker.CityData)
-	wg.Wait()
-	close(app.apiWorker.CityData)
+
+	wgc := &sync.WaitGroup{}
+	for i := 0; i < app.config.ConsumerCount; i++ {
+		wgc.Add(1)
+		go app.consumer.Work(wgc, app.rabbitClient)
+	}
+
+	wgp.Wait()
+	close(app.producer.CityData)
+	wgc.Wait()
 	log.Print("DONE")
 }

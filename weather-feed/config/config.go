@@ -5,6 +5,7 @@ import "github.com/tkanos/gonfig"
 type Configuration struct {
 	BaseUrl              string
 	LookBackwardInMonths int
+	ConsumerCount        int
 }
 
 func GetConfig() Configuration {
