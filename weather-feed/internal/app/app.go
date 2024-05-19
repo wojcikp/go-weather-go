@@ -18,7 +18,10 @@ type IApp interface {
 }
 
 type App struct {
+	config       config.Configuration
+	reader       citiesreader.ICityReader
 	rabbitClient *rabbitmqclient.RabbitClient
+	producer     *weatherdataworkers.ApiDataProducer
 	consumer     *weatherdataworkers.Consumer
 }
 
@@ -26,6 +29,7 @@ func NewApp(
 	config config.Configuration,
 	reader citiesreader.ICityReader,
 	rabbitClient *rabbitmqclient.RabbitClient,
+	producer *weatherdataworkers.ApiDataProducer,
 	consumer *weatherdataworkers.Consumer,
 ) *App {
 	return &App{config, reader, rabbitClient, producer, consumer}
