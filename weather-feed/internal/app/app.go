@@ -8,7 +8,7 @@ import (
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
-	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
+	rabbitmqpublisher "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 	"golang.org/x/sync/semaphore"
 )
@@ -18,21 +18,21 @@ type IApp interface {
 }
 
 type App struct {
-	config       config.Configuration
-	reader       citiesreader.ICityReader
-	rabbitClient *rabbitmqclient.RabbitClient
-	producer     *weatherdataworkers.ApiDataProducer
-	consumer     *weatherdataworkers.Consumer
+	config          config.Configuration
+	reader          citiesreader.ICityReader
+	rabbitPublisher *rabbitmqpublisher.RabbitPublisher
+	producer        *weatherdataworkers.ApiDataProducer
+	consumer        *weatherdataworkers.Consumer
 }
 
 func NewApp(
 	config config.Configuration,
 	reader citiesreader.ICityReader,
-	rabbitClient *rabbitmqclient.RabbitClient,
+	rabbitPublisher *rabbitmqpublisher.RabbitPublisher,
 	producer *weatherdataworkers.ApiDataProducer,
 	consumer *weatherdataworkers.Consumer,
 ) *App {
-	return &App{config, reader, rabbitClient, producer, consumer}
+	return &App{config, reader, rabbitPublisher, producer, consumer}
 }
 
 func (app App) Run() {
@@ -55,7 +55,7 @@ func (app App) Run() {
 	wgc := &sync.WaitGroup{}
 	for i := 0; i < app.config.ConsumerCount; i++ {
 		wgc.Add(1)
-		go app.consumer.Work(wgc, app.rabbitClient)
+		go app.consumer.Work(wgc, app.rabbitPublisher)
 	}
 
 	wgp.Wait()

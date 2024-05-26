@@ -1,4 +1,4 @@
-package rabbitmqclient
+package rabbitmqpublisher
 
 import (
 	"context"
@@ -10,19 +10,19 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type RabbitClient struct {
+type RabbitPublisher struct {
 	Queue string
 }
 
-func NewRabbitClient(queue string) *RabbitClient {
-	return &RabbitClient{Queue: queue}
+func NewRabbitPublisher(queue string) *RabbitPublisher {
+	return &RabbitPublisher{Queue: queue}
 }
 
-func (r RabbitClient) ProcessWeatherData(data []byte) {
+func (r RabbitPublisher) ProcessWeatherData(data []byte) {
 	r.putMsgOnQueue(data)
 }
 
-func (r RabbitClient) putMsgOnQueue(msg []byte) {
+func (r RabbitPublisher) putMsgOnQueue(msg []byte) {
 	user := os.Getenv("RABBITMQ_DEFAULT_USER")
 	pass := os.Getenv("RABBITMQ_DEFAULT_PASS")
 	url := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, pass)

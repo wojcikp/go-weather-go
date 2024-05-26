@@ -9,7 +9,7 @@ import (
 	apiclient "github.com/wojcikp/go-weather-go/weather-feed/internal/api_client"
 	"github.com/wojcikp/go-weather-go/weather-feed/internal/app"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
-	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
+	rabbitmqpublisher "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 )
 
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
-	rabbitClient := rabbitmqclient.NewRabbitClient("queue1")
+	rabbitClient := rabbitmqpublisher.NewRabbitPublisher("queue1")
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 
