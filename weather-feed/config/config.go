@@ -6,6 +6,7 @@ type Configuration struct {
 	BaseUrl              string
 	LookBackwardInMonths int
 	ConsumerCount        int
+	MockCityInput        bool
 }
 
 func GetConfig() Configuration {

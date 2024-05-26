@@ -1,5 +1,6 @@
 {
     "BaseUrl": "https://archive-api.open-meteo.com/v1/era5",
     "LookBackwardInMonths": -6,
-    "ConsumerCount": 10
+    "ConsumerCount": 10,
+    "MockCityInput": true
 }

@@ -29,11 +29,11 @@ type CityInput struct {
 	Population_proper string `json:"population_proper,omitempty"`
 }
 
-func NewReader() *CitiesReader {
+func NewReader() ICityReader {
 	return &CitiesReader{}
 }
 
-func NewReaderMock() *CitiesReaderMock {
+func NewReaderMock() ICityReader {
 	return &CitiesReaderMock{}
 }
 

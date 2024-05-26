@@ -18,10 +18,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file, err: %v", err)
 	}
-	cityData := make(chan internal.CityWeatherData)
 
+	cityData := make(chan internal.CityWeatherData)
 	config := config.GetConfig()
-	reader := citiesreader.NewReaderMock()
+
+	var reader citiesreader.ICityReader
+	if config.MockCityInput {
+		reader = citiesreader.NewReaderMock()
+	} else {
+		reader = citiesreader.NewReader()
+	}
+
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
 	rabbitClient := rabbitmqclient.NewRabbitClient("queue1")
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)

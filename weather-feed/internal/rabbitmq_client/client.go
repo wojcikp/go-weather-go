@@ -67,5 +67,4 @@ func (r RabbitClient) putMsgOnQueue(msg []byte) {
 	if err != nil {
 		log.Fatalf("Failed to publish a message, err: %v", err)
 	}
-	log.Printf(" [x] Sent %s\n", msg)
 }
