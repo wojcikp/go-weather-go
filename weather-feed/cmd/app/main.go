@@ -9,7 +9,7 @@ import (
 	apiclient "github.com/wojcikp/go-weather-go/weather-feed/internal/api_client"
 	"github.com/wojcikp/go-weather-go/weather-feed/internal/app"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
-	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_client"
+	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 )
 

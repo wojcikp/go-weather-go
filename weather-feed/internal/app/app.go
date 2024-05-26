@@ -8,7 +8,7 @@ import (
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 	citiesreader "github.com/wojcikp/go-weather-go/weather-feed/internal/cities_reader"
-	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_client"
+	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 	"golang.org/x/sync/semaphore"
 )
