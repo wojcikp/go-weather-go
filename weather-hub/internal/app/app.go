@@ -1,13 +1,20 @@
 package app
 
-import "log"
+import (
+	"log"
 
-type App struct{}
+	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
+)
 
-func NewApp() *App {
-	return &App{}
+type App struct {
+	rabbitClient *rabbitmqclient.RabbitClient
+}
+
+func NewApp(rabbitClient *rabbitmqclient.RabbitClient) *App {
+	return &App{rabbitClient}
 }
 
 func (app App) Run() {
 	log.Print("weather hub app run")
+	app.rabbitClient.ReceiveMessages()
 }
