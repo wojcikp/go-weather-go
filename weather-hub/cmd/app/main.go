@@ -8,12 +8,15 @@ import (
 	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
 )
 
+const queueName = "queue1"
+
 func main() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
 		log.Fatalf("Error loading .env file, err: %v", err)
 	}
-	r := rabbitmqclient.GetRabbitClient("queue1")
+	weatherFeed := make(chan []byte)
+	r := rabbitmqclient.GetRabbitClient(queueName, weatherFeed)
 	app := app.NewApp(r)
 	app.Run()
 }

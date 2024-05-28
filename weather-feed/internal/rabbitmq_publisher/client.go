@@ -11,11 +11,11 @@ import (
 )
 
 type RabbitPublisher struct {
-	Queue string
+	queue string
 }
 
 func NewRabbitPublisher(queue string) *RabbitPublisher {
-	return &RabbitPublisher{Queue: queue}
+	return &RabbitPublisher{queue}
 }
 
 func (r RabbitPublisher) ProcessWeatherData(data []byte) {
@@ -39,7 +39,7 @@ func (r RabbitPublisher) putMsgOnQueue(msg []byte) {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		r.Queue, // name
+		r.queue, // name
 		true,    // durable
 		false,   // delete when unused
 		false,   // exclusive

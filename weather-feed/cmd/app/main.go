@@ -13,6 +13,8 @@ import (
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 )
 
+const queueName = "queue1"
+
 func main() {
 	err := godotenv.Load("../../.env")
 	if err != nil {
@@ -30,7 +32,7 @@ func main() {
 	}
 
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
-	rabbitClient := rabbitmqpublisher.NewRabbitPublisher("queue1")
+	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(queueName)
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 

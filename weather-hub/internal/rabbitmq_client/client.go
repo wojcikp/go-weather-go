@@ -9,11 +9,12 @@ import (
 )
 
 type RabbitClient struct {
-	Queue string
+	queue       string
+	weatherFeed chan []byte
 }
 
-func GetRabbitClient(queue string) *RabbitClient {
-	return &RabbitClient{queue}
+func GetRabbitClient(queue string, weatherFeed chan []byte) *RabbitClient {
+	return &RabbitClient{queue, weatherFeed}
 }
 
 func (c RabbitClient) ReceiveMessages() {
@@ -33,7 +34,7 @@ func (c RabbitClient) ReceiveMessages() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		c.Queue, // name
+		c.queue, // name
 		true,    // durable
 		false,   // delete when unused
 		false,   // exclusive
@@ -60,8 +61,9 @@ func (c RabbitClient) ReceiveMessages() {
 	var forever chan struct{}
 
 	go func() {
-		for d := range msgs {
-			log.Printf("Received a message: %s", d.Body)
+		for data := range msgs {
+			c.weatherFeed <- data.Body
+			log.Printf("Received a message: %s", data.Body)
 		}
 	}()
 

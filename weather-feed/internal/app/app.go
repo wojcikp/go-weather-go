@@ -61,5 +61,5 @@ func (app App) Run() {
 	wgp.Wait()
 	close(app.producer.CityData)
 	wgc.Wait()
-	log.Print("DONE")
+	log.Print("Weather feed published")
 }
