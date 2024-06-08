@@ -12,8 +12,10 @@ import (
 )
 
 type Hourly struct {
-	Temperature2m []float64 `json:"temperature_2m"`
-	WeatherCode   []int     `json:"weather_code"`
+	Time          []internal.CustomTime `json:"time"`
+	Temperature2m []float64             `json:"temperature_2m"`
+	WindSpeed     []float64             `json:"wind_speed_10m"`
+	WeatherCode   []int                 `json:"weather_code"`
 }
 
 type ApiResponse struct {
@@ -34,11 +36,12 @@ func (c WeatherApiClient) FetchData(ctx context.Context, cityInfo internal.BaseC
 	ctxTimeout, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	today := time.Now()
-	startDate := today.AddDate(0, c.lookBackwardInMonths, 0).Format("2006-01-02")
+	const twoDaysAgo = -2
+	endDate := time.Now().AddDate(0, 0, twoDaysAgo)
+	startDate := endDate.AddDate(0, c.lookBackwardInMonths, 0).Format("2006-01-02")
 	url := fmt.Sprintf(
-		"%s?latitude=%s&longitude=%s&start_date=%s&end_date=%s&hourly=temperature_2m,weather_code",
-		c.baseUrl, cityInfo.Latitude, cityInfo.Longtitude, startDate, today.Format("2006-01-02"),
+		"%s?latitude=%s&longitude=%s&start_date=%s&end_date=%s&hourly=temperature_2m,weather_code,wind_speed_10m",
+		c.baseUrl, cityInfo.Latitude, cityInfo.Longtitude, startDate, endDate.Format("2006-01-02"),
 	)
 
 	req, err := http.NewRequestWithContext(ctxTimeout, http.MethodGet, url, nil)

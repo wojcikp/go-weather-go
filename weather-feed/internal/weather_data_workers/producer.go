@@ -30,14 +30,18 @@ func (w ApiDataProducer) Work(ctx context.Context, apiJob internal.BaseCityInfo,
 		log.Fatalf("Data for city: %s not fetched, err: %v", apiJob.Name, err)
 		w.CityData <- internal.CityWeatherData{
 			Name:         apiJob.Name,
+			Time:         []internal.CustomTime{},
 			Temperatures: []float64{},
+			WindSpeed:    []float64{},
 			WeatherCodes: []int{},
 			Error:        err,
 		}
 	}
 	w.CityData <- internal.CityWeatherData{
 		Name:         apiJob.Name,
+		Time:         weatherData.Hourly.Time,
 		Temperatures: weatherData.Hourly.Temperature2m,
+		WindSpeed:    weatherData.Hourly.WindSpeed,
 		WeatherCodes: weatherData.Hourly.WeatherCode,
 		Error:        nil,
 	}
