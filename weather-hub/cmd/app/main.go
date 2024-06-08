@@ -5,7 +5,9 @@ import (
 
 	"github.com/lpernett/godotenv"
 	"github.com/wojcikp/go-weather-go/weather-hub/internal/app"
+	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
+	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
 )
 
 const queueName = "queue1"
@@ -16,7 +18,9 @@ func main() {
 		log.Fatalf("Error loading .env file, err: %v", err)
 	}
 	weatherFeed := make(chan []byte)
-	r := rabbitmqclient.GetRabbitClient(queueName, weatherFeed)
-	app := app.NewApp(r)
+	rabbit := rabbitmqclient.NewRabbitClient(queueName, weatherFeed)
+	clickhouse := chclient.NewClickhouseClient()
+	consumer := weatherfeedconsumer.NewWeatherFeedConsumer(weatherFeed)
+	app := app.NewApp(rabbit, clickhouse, consumer)
 	app.Run()
 }
