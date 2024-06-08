@@ -23,9 +23,11 @@ func (r RabbitPublisher) ProcessWeatherData(data []byte) {
 }
 
 func (r RabbitPublisher) putMsgOnQueue(msg []byte) {
-	user := os.Getenv("RABBITMQ_DEFAULT_USER")
-	pass := os.Getenv("RABBITMQ_DEFAULT_PASS")
-	url := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, pass)
+	user := os.Getenv("RABBITMQ_USER")
+	pass := os.Getenv("RABBITMQ_PASS")
+	host := os.Getenv("RABBITMQ_HOST")
+	port := os.Getenv("RABBITMQ_PORT")
+	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", user, pass, host, port)
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ, err: %v", err)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -13,14 +14,17 @@ type RabbitClient struct {
 	weatherFeed chan []byte
 }
 
-func GetRabbitClient(queue string, weatherFeed chan []byte) *RabbitClient {
+func NewRabbitClient(queue string, weatherFeed chan []byte) *RabbitClient {
 	return &RabbitClient{queue, weatherFeed}
 }
 
-func (c RabbitClient) ReceiveMessages() {
-	user := os.Getenv("RABBITMQ_DEFAULT_USER")
-	pass := os.Getenv("RABBITMQ_DEFAULT_PASS")
-	url := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, pass)
+func (c RabbitClient) ReceiveMessages(wg *sync.WaitGroup) {
+	defer wg.Done()
+	user := os.Getenv("RABBITMQ_USER")
+	pass := os.Getenv("RABBITMQ_PASS")
+	host := os.Getenv("RABBITMQ_HOST")
+	port := os.Getenv("RABBITMQ_PORT")
+	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", user, pass, host, port)
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ, err: %v", err)
@@ -63,7 +67,6 @@ func (c RabbitClient) ReceiveMessages() {
 	go func() {
 		for data := range msgs {
 			c.weatherFeed <- data.Body
-			log.Printf("Received a message: %s", data.Body)
 		}
 	}()
 
