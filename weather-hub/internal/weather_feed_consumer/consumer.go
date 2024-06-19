@@ -27,6 +27,7 @@ func (c Consumer) Work(wg *sync.WaitGroup, wfc IWeatherFeedConsumer) {
 		if err := json.Unmarshal(msg, &data); err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("Processing data feed for city: %s", data.Name)
 		wfc.ProcessWeatherFeed(data)
 	}
 }

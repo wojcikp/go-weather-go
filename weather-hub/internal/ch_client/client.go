@@ -37,6 +37,7 @@ func (c ClickhouseClient) CreateWeatherTable() {
 }
 
 func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
+	defer log.Printf("Processed data feed for city: %s", data.Name)
 	for i := 0; i < len(data.Time); i++ {
 		q := fmt.Sprintf(
 			"INSERT INTO weather_database.testowa_dwa (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
