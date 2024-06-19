@@ -8,7 +8,7 @@ import (
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 )
 
-type WeatherDataConsumer interface {
+type IWeatherDataConsumer interface {
 	ProcessWeatherData(data []byte)
 }
 
@@ -20,7 +20,7 @@ func NewWeatherDataConsumer(cityData chan internal.CityWeatherData) *Consumer {
 	return &Consumer{cityData}
 }
 
-func (c Consumer) Work(wg *sync.WaitGroup, wdc WeatherDataConsumer) {
+func (c Consumer) Work(wg *sync.WaitGroup, wdc IWeatherDataConsumer) {
 	defer wg.Done()
 	for msg := range c.cityData {
 		data, err := json.Marshal(msg)

@@ -36,12 +36,10 @@ func (c WeatherApiClient) FetchData(ctx context.Context, cityInfo internal.BaseC
 	ctxTimeout, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	const twoDaysAgo = -2
-	endDate := time.Now().AddDate(0, 0, twoDaysAgo)
-	startDate := endDate.AddDate(0, c.lookBackwardInMonths, 0).Format("2006-01-02")
+	startDate := time.Now().AddDate(0, c.lookBackwardInMonths, 0).Format("2006-01-02")
 	url := fmt.Sprintf(
 		"%s?latitude=%s&longitude=%s&start_date=%s&end_date=%s&hourly=temperature_2m,weather_code,wind_speed_10m",
-		c.baseUrl, cityInfo.Latitude, cityInfo.Longtitude, startDate, endDate.Format("2006-01-02"),
+		c.baseUrl, cityInfo.Latitude, cityInfo.Longtitude, startDate, time.Now().Format("2006-01-02"),
 	)
 
 	req, err := http.NewRequestWithContext(ctxTimeout, http.MethodGet, url, nil)

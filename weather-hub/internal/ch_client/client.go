@@ -30,13 +30,14 @@ func (c ClickhouseClient) CreateWeatherTable() {
 	)
 	ENGINE = ReplacingMergeTree
 	PRIMARY KEY (city, time)`
-	err := c.QueryCh(q)
+	err := c.ExecQueryDb(q)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
+	defer log.Printf("Processed data feed for city: %s", data.Name)
 	for i := 0; i < len(data.Time); i++ {
 		q := fmt.Sprintf(
 			"INSERT INTO weather_database.testowa_dwa (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
@@ -46,11 +47,11 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 			data.WindSpeed[i],
 			data.WeatherCodes[i],
 		)
-		c.QueryCh(q)
+		c.ExecQueryDb(q)
 	}
 }
 
-func (c ClickhouseClient) QueryCh(query string) error {
+func (c ClickhouseClient) ExecQueryDb(query string) error {
 	conn, err := connect()
 	if err != nil {
 		return err
@@ -64,6 +65,22 @@ func (c ClickhouseClient) QueryCh(query string) error {
 	}
 
 	return nil
+}
+
+func (c ClickhouseClient) QueryDb(query string) (any, error) {
+	conn, err := connect()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	ctx := context.Background()
+	rows, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func connect() (driver.Conn, error) {
@@ -80,9 +97,9 @@ func connect() (driver.Conn, error) {
 			var d net.Dialer
 			return d.DialContext(ctx, "tcp", addr)
 		},
-		Debug: true,
+		Debug: false,
 		Debugf: func(format string, v ...any) {
-			fmt.Printf(format+"\n", v...)
+			log.Printf(format+"\n", v...)
 		},
 		Settings: clickhouse.Settings{
 			"max_execution_time": 60,
