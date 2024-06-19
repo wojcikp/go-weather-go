@@ -8,7 +8,7 @@ import (
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 )
 
-type WeatherFeedConsumer interface {
+type IWeatherFeedConsumer interface {
 	ProcessWeatherFeed(data internal.CityWeatherData)
 }
 
@@ -20,7 +20,7 @@ func NewWeatherFeedConsumer(weatherFeed chan []byte) *Consumer {
 	return &Consumer{weatherFeed}
 }
 
-func (c Consumer) Work(wg *sync.WaitGroup, wfc WeatherFeedConsumer) {
+func (c Consumer) Work(wg *sync.WaitGroup, wfc IWeatherFeedConsumer) {
 	defer wg.Done()
 	for msg := range c.weatherFeed {
 		data := internal.CityWeatherData{}
