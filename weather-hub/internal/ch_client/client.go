@@ -96,9 +96,9 @@ func connect() (driver.Conn, error) {
 			var d net.Dialer
 			return d.DialContext(ctx, "tcp", addr)
 		},
-		Debug: true,
+		Debug: false,
 		Debugf: func(format string, v ...any) {
-			fmt.Printf(format+"\n", v...)
+			log.Printf(format+"\n", v...)
 		},
 		Settings: clickhouse.Settings{
 			"max_execution_time": 60,
