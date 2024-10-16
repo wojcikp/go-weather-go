@@ -1,11 +1,12 @@
 package app
 
 import (
+	"bytes"
 	"log"
-	"sync"
 
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
+	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
 	weatherscores "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_scores"
 )
@@ -14,34 +15,49 @@ type App struct {
 	rabbitClient     *rabbitmqclient.RabbitClient
 	clickhouseClient *chclient.ClickhouseClient
 	feedConsumer     *weatherfeedconsumer.Consumer
+	reader           scorereader.IScoreReader
 }
 
 func NewApp(
 	rabbitClient *rabbitmqclient.RabbitClient,
 	clickhouseClient *chclient.ClickhouseClient,
 	feedConsumer *weatherfeedconsumer.Consumer,
+	reader scorereader.IScoreReader,
 ) *App {
-	return &App{rabbitClient, clickhouseClient, feedConsumer}
+	return &App{rabbitClient, clickhouseClient, feedConsumer, reader}
 }
 
 func (app App) Run() {
 	log.Print("weather hub app run")
-	for _, score := range weatherscores.GetScoresList[string]() {
-		log.Print("Id: ", score.GetId())
-		log.Print("Name: ", score.GetName())
-		value, err := score.GetScore(app.clickhouseClient)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Print("Value: ", value)
-	}
-	wg := &sync.WaitGroup{}
-	app.clickhouseClient.CreateWeatherTable()
-	wg.Add(1)
-	go app.rabbitClient.ReceiveMessages(wg)
+	done := make(chan struct{})
+	feedCounter := 0
+	go app.clickhouseClient.CreateWeatherTable()
+	go app.rabbitClient.ReceiveMessages(&feedCounter)
 	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go app.feedConsumer.Work(wg, app.clickhouseClient)
+		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	wg.Wait()
+	go readScores(app.reader, app.clickhouseClient, done, &feedCounter)
+	forever := make(chan struct{})
+	<-forever
+}
+
+func readScores(
+	reader scorereader.IScoreReader,
+	clickhouseClient *chclient.ClickhouseClient,
+	done chan struct{},
+	feedCounter *int,
+) {
+	stringScores := weatherscores.GetScoresList[string]()
+	floatScores := weatherscores.GetScoresList[float64]()
+	var scoresInfo bytes.Buffer
+	for {
+		<-done
+		for i := 0; i < *feedCounter-1; i++ {
+			<-done
+		}
+		weatherscores.GetScoresInfo(stringScores, &scoresInfo, clickhouseClient)
+		weatherscores.GetScoresInfo(floatScores, &scoresInfo, clickhouseClient)
+		scorereader.ReadScores(reader, &scoresInfo)
+		*feedCounter = 0
+	}
 }
