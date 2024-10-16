@@ -1,16 +1,6 @@
 package weatherscores
 
-type autoInc struct {
-	id int
-}
-
-func (a *autoInc) ID() (id int) {
-	id = a.id
-	a.id++
-	return
-}
-
-var ai autoInc
+)
 
 type IDbClient interface {
 	QueryDb(query string) (any, error)
@@ -31,6 +21,8 @@ type BaseWeatherScore struct {
 	Id int
 }
 
-func (wc *BaseWeatherScore) GetId() int {
-	return ai.ID()
+func (ws *BaseWeatherScore) GetId() int {
+	return ws.Id
+}
+}
 }
