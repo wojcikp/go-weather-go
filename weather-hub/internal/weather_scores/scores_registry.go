@@ -18,7 +18,7 @@ func GetScoresList[T ScoreValue]() []IWeatherScore[T] {
 	case float64:
 		return []IWeatherScore[T]{}
 	default:
-		log.Fatalf("Unsupported feature type: %v", v)
+		log.Fatalf("Unsupported score type: %v", v)
 		return []IWeatherScore[T]{}
 	}
 }

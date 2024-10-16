@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -18,8 +17,7 @@ func NewRabbitClient(queue string, weatherFeed chan []byte) *RabbitClient {
 	return &RabbitClient{queue, weatherFeed}
 }
 
-func (c RabbitClient) ReceiveMessages(wg *sync.WaitGroup) {
-	defer wg.Done()
+func (c RabbitClient) ReceiveMessages(feedCounter *int) {
 	user := os.Getenv("RABBITMQ_USER")
 	pass := os.Getenv("RABBITMQ_PASS")
 	host := os.Getenv("RABBITMQ_HOST")
@@ -62,11 +60,12 @@ func (c RabbitClient) ReceiveMessages(wg *sync.WaitGroup) {
 		log.Fatalf("Failed to register a consumer, err: %v", err)
 	}
 
-	var forever chan struct{}
+	forever := make(chan struct{})
 
 	go func() {
 		for data := range msgs {
 			c.weatherFeed <- data.Body
+			*feedCounter++
 		}
 	}()
 
