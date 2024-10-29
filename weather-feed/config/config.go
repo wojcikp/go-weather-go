@@ -8,7 +8,6 @@ import (
 
 type Configuration struct {
 	BaseUrl              string
-	QueueName            string
 	LookBackwardInMonths int
 	ConsumerCount        int
 	MockCityInput        bool
