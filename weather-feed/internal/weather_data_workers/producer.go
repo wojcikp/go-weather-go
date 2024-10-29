@@ -43,16 +43,18 @@ func (w ApiDataProducer) Work(ctx context.Context, city internal.BaseCityInfo, w
 				Temperatures: []float64{},
 				WindSpeed:    []float64{},
 				WeatherCodes: []int{},
-				Error:        err,
+				ErrorMsg:     err.Error(),
 			}
 		}
 	}
-	w.CityData <- internal.CityWeatherData{
-		Name:         city.Name,
-		Time:         weatherData.Hourly.Time,
-		Temperatures: weatherData.Hourly.Temperature2m,
-		WindSpeed:    weatherData.Hourly.WindSpeed,
-		WeatherCodes: weatherData.Hourly.WeatherCode,
-		Error:        nil,
+	if err == nil {
+		w.CityData <- internal.CityWeatherData{
+			Name:         city.Name,
+			Time:         weatherData.Hourly.Time,
+			Temperatures: weatherData.Hourly.Temperature2m,
+			WindSpeed:    weatherData.Hourly.WindSpeed,
+			WeatherCodes: weatherData.Hourly.WeatherCode,
+			ErrorMsg:     "",
+		}
 	}
 }

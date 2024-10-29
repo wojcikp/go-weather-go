@@ -37,17 +37,25 @@ func (c ClickhouseClient) CreateWeatherTable() {
 }
 
 func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
-	defer log.Printf("Processed data feed for city: %s", data.Name)
-	for i := 0; i < len(data.Time); i++ {
-		q := fmt.Sprintf(
-			"INSERT INTO weather_database.testowa_dwa (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
+	if len(data.ErrorMsg) > 0 {
+		log.Printf(
+			"Weather data feed for following city: %s contains error: %s\nSkipping clickhouse insert based on this feed",
 			data.Name,
-			data.Time[i].Format(time.DateTime),
-			data.Temperatures[i],
-			data.WindSpeed[i],
-			data.WeatherCodes[i],
+			data.ErrorMsg,
 		)
-		c.ExecQueryDb(q)
+	} else {
+		for i := 0; i < len(data.Time); i++ {
+			q := fmt.Sprintf(
+				"INSERT INTO weather_database.testowa_dwa (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
+				data.Name,
+				data.Time[i].Format(time.DateTime),
+				data.Temperatures[i],
+				data.WindSpeed[i],
+				data.WeatherCodes[i],
+			)
+			c.ExecQueryDb(q)
+		}
+		log.Printf("Processed data feed for city: %s", data.Name)
 	}
 }
 

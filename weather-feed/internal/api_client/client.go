@@ -59,7 +59,7 @@ func (c WeatherApiClient) FetchData(ctx context.Context, cityInfo internal.BaseC
 	}
 
 	if res.StatusCode > 299 {
-		return ApiResponse{}, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, data)
+		return ApiResponse{}, fmt.Errorf("response failed with status code: %d and body: %s", res.StatusCode, data)
 	}
 
 	var responseData ApiResponse

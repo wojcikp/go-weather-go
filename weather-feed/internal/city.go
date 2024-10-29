@@ -15,7 +15,7 @@ type CityWeatherData struct {
 	Temperatures []float64
 	WindSpeed    []float64
 	WeatherCodes []int
-	Error        error
+	ErrorMsg     string
 }
 
 type BaseCityInfo struct {
