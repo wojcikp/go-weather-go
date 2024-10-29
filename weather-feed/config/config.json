@@ -1,5 +1,6 @@
 {
     "BaseUrl": "https://api.open-meteo.com/v1/forecast",
+    "QueueName": "queue1",
     "LookBackwardInMonths": -6,
     "ConsumerCount": 10,
     "MockCityInput": true
