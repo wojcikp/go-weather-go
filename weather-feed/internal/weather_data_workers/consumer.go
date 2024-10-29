@@ -9,7 +9,7 @@ import (
 )
 
 type IWeatherDataConsumer interface {
-	ProcessWeatherData(data []byte)
+	ProcessWeatherData(data []byte) error
 }
 
 type Consumer struct {
@@ -25,8 +25,10 @@ func (c Consumer) Work(wg *sync.WaitGroup, wdc IWeatherDataConsumer) {
 	for msg := range c.cityData {
 		data, err := json.Marshal(msg)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("ERROR: Marshalling data to json format for city: %s failed due to following error: %v", msg.Name, err)
 		}
-		wdc.ProcessWeatherData(data)
+		if err = wdc.ProcessWeatherData(data); err != nil {
+			log.Printf("ERROR: Data for city: %s was not processed due to following error: %v", msg.Name, err)
+		}
 	}
 }

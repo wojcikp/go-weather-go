@@ -32,7 +32,7 @@ func NewApiClient(baseUrl string, lookBackwardInMonths int) *WeatherApiClient {
 }
 
 func (c WeatherApiClient) FetchData(ctx context.Context, cityInfo internal.BaseCityInfo) (ApiResponse, error) {
-	timeout := 3 * time.Second
+	const timeout = 3 * time.Second
 	ctxTimeout, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -61,6 +61,10 @@ func (c WeatherApiClient) FetchData(ctx context.Context, cityInfo internal.BaseC
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return ApiResponse{}, err
+	}
+
+	if res.StatusCode > 299 {
+		return ApiResponse{}, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, data)
 	}
 
 	var responseData ApiResponse

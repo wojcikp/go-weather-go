@@ -18,25 +18,22 @@ func NewRabbitPublisher(queue string) *RabbitPublisher {
 	return &RabbitPublisher{queue}
 }
 
-func (r RabbitPublisher) ProcessWeatherData(data []byte) {
-	r.putMsgOnQueue(data)
+func (r RabbitPublisher) ProcessWeatherData(data []byte) error {
+	if err := r.putMsgOnQueue(data); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (r RabbitPublisher) putMsgOnQueue(msg []byte) {
-	user := os.Getenv("RABBITMQ_USER")
-	pass := os.Getenv("RABBITMQ_PASS")
-	host := os.Getenv("RABBITMQ_HOST")
-	port := os.Getenv("RABBITMQ_PORT")
-	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", user, pass, host, port)
-	conn, err := amqp.Dial(url)
+func (r RabbitPublisher) putMsgOnQueue(msg []byte) error {
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ, err: %v", err)
+		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
 	}
 	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open a channel, err: %v", err)
+		return fmt.Errorf("failed to open a channel, err: %w", err)
 	}
 	defer ch.Close()
 
@@ -49,7 +46,7 @@ func (r RabbitPublisher) putMsgOnQueue(msg []byte) {
 		nil,     // arguments
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare a queue, err: %v", err)
+		return fmt.Errorf("failed to declare a queue, err: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -67,6 +64,8 @@ func (r RabbitPublisher) putMsgOnQueue(msg []byte) {
 		},
 	)
 	if err != nil {
-		log.Fatalf("Failed to publish a message, err: %v", err)
+		return fmt.Errorf("failed to publish a message, err: %w", err)
 	}
+
+	return nil
 }

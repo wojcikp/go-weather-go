@@ -21,8 +21,10 @@ func main() {
 		log.Fatalf("Error loading .env file, err: %v", err)
 	}
 
-	cityData := make(chan internal.CityWeatherData)
-	config := config.GetConfig()
+	config, err := config.GetConfig()
+	if err != nil {
+		return &app.App{}, nil
+	}
 
 	var reader citiesreader.ICityReader
 	if config.MockCityInput {
@@ -36,6 +38,5 @@ func main() {
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 
-	app := app.NewApp(config, reader, rabbitClient, producer, consumer)
-	app.Run()
+	return app.NewApp(config, reader, rabbitClient, producer, consumer), nil
 }

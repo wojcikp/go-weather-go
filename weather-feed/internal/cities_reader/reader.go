@@ -2,7 +2,7 @@ package citiesreader
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"os"
 	"path"
 
@@ -40,7 +40,7 @@ func NewReaderMock() ICityReader {
 func (r CitiesReader) Read() ([]CityInput, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	p := path.Join(dir, "..", "..", "assets", "pl172.json")
 	file, err := os.ReadFile(p)
@@ -70,7 +70,7 @@ func (r CitiesReaderMock) Read() ([]CityInput, error) {
 func GetCitiesInput(r ICityReader) ([]internal.BaseCityInfo, error) {
 	input, err := r.Read()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file with input cities list, err: %w", err)
 	}
 
 	var baseCityInfo []internal.BaseCityInfo

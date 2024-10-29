@@ -1,6 +1,10 @@
 package config
 
-import "github.com/tkanos/gonfig"
+import (
+	"fmt"
+
+	"github.com/tkanos/gonfig"
+)
 
 type Configuration struct {
 	BaseUrl              string
@@ -9,10 +13,12 @@ type Configuration struct {
 	MockCityInput        bool
 }
 
-func GetConfig() Configuration {
+const configPath = "../../config/config.json"
+
+func GetConfig() (Configuration, error) {
 	configuration := Configuration{}
-	if err := gonfig.GetConf("../../config/config.json", &configuration); err != nil {
-		panic(err)
+	if err := gonfig.GetConf(configPath, &configuration); err != nil {
+		return Configuration{}, fmt.Errorf("could not read config file, err: %w", err)
 	}
-	return configuration
+	return configuration, nil
 }
