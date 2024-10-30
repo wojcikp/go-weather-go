@@ -20,7 +20,8 @@ func NewClickhouseClient() *ClickhouseClient {
 }
 
 func (c ClickhouseClient) CreateWeatherTable() {
-	q := `CREATE TABLE IF NOT EXISTS weather_database.testowa_dwa
+	db, table := os.Getenv("CLICKHOUSE_DB"), os.Getenv("CLICKHOUSE_TABLE")
+	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s
 	(
 		city String NOT NULL,
 		time DateTime NOT NULL,
@@ -29,10 +30,10 @@ func (c ClickhouseClient) CreateWeatherTable() {
 		weather_code Int64
 	)
 	ENGINE = ReplacingMergeTree
-	PRIMARY KEY (city, time)`
+	PRIMARY KEY (city, time)`, db, table)
 	err := c.ExecQueryDb(q)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Creating table: %s in clickhouse db: %s failed due to following error: %v.\nexecuted query: %s", table, db, err, q)
 	}
 }
 
@@ -44,16 +45,24 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 			data.ErrorMsg,
 		)
 	} else {
+		var executeQueryErrors []error
 		for i := 0; i < len(data.Time); i++ {
 			q := fmt.Sprintf(
-				"INSERT INTO weather_database.testowa_dwa (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
+				"INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
+				os.Getenv("CLICKHOUSE_DB"),
+				os.Getenv("CLICKHOUSE_TABLE"),
 				data.Name,
 				data.Time[i].Format(time.DateTime),
 				data.Temperatures[i],
 				data.WindSpeed[i],
 				data.WeatherCodes[i],
 			)
-			c.ExecQueryDb(q)
+			if err := c.ExecQueryDb(q); err != nil {
+				executeQueryErrors = append(executeQueryErrors, err)
+			}
+		}
+		if len(executeQueryErrors) > 0 {
+			log.Printf("ERROR: Processing weather feed for city: %s failed. Errors: %v", data.Name, executeQueryErrors)
 		}
 		log.Printf("Processed data feed for city: %s", data.Name)
 	}
@@ -92,12 +101,13 @@ func (c ClickhouseClient) QueryDb(query string) (any, error) {
 }
 
 func connect() (driver.Conn, error) {
+	db := os.Getenv("CLICKHOUSE_DB")
 	host := os.Getenv("CLICKHOUSE_HOST")
 	port := os.Getenv("CLICKHOUSE_PORT")
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{fmt.Sprintf("%s:%s", host, port)},
 		Auth: clickhouse.Auth{
-			Database: "weather_database",
+			Database: db,
 			Username: os.Getenv("CLICKHOUSE_USER"),
 			Password: os.Getenv("CLICKHOUSE_PASS"),
 		},
@@ -124,7 +134,8 @@ func connect() (driver.Conn, error) {
 		MaxCompressionBuffer: 10240,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"connecting to clickhouse db: %s, host: %s, port %s failed due to following error %w", db, host, port, err)
 	}
-	return conn, err
+	return conn, nil
 }
