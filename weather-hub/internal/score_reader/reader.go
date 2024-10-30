@@ -6,7 +6,7 @@ import (
 )
 
 type IScoreReader interface {
-	HandleScores(scores io.Reader)
+	ReadScores(scores io.Reader)
 }
 
 type ConsoleScoreReader struct{}
@@ -15,10 +15,6 @@ func NewConsoleScoreReader() *ConsoleScoreReader {
 	return &ConsoleScoreReader{}
 }
 
-func (r ConsoleScoreReader) HandleScores(scores io.Reader) {
+func (r ConsoleScoreReader) ReadScores(scores io.Reader) {
 	io.Copy(os.Stdout, scores)
-}
-
-func ReadScores(reader IScoreReader, scores io.Reader) {
-	reader.HandleScores(scores)
 }
