@@ -19,7 +19,10 @@ func main() {
 		log.Fatalf("Error loading .env file, err: %v", err)
 	}
 	weatherFeed := make(chan []byte)
-	rabbit := rabbitmqclient.NewRabbitClient(queueName, weatherFeed)
+	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/",
+		os.Getenv("RABBITMQ_USER"), os.Getenv("RABBITMQ_PASS"),
+		os.Getenv("RABBITMQ_HOST"), os.Getenv("RABBITMQ_PORT"))
+	rabbit := rabbitmqclient.NewRabbitClient(os.Getenv("RABBITMQ_QUEUE"), rabbitUrl, weatherFeed)
 	clickhouse := chclient.NewClickhouseClient()
 	consumer := weatherfeedconsumer.NewWeatherFeedConsumer(weatherFeed)
 	reader := scorereader.NewConsoleScoreReader()

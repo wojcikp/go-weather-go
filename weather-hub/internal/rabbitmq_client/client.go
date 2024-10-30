@@ -3,27 +3,21 @@ package rabbitmqclient
 import (
 	"fmt"
 	"log"
-	"os"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitClient struct {
 	queue       string
+	url         string
 	weatherFeed chan []byte
 }
 
-func NewRabbitClient(queue string, weatherFeed chan []byte) *RabbitClient {
-	return &RabbitClient{queue, weatherFeed}
+func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
+	return &RabbitClient{queue, url, weatherFeed}
 }
 
-func (c RabbitClient) ReceiveMessages(feedCounter *int) {
-	user := os.Getenv("RABBITMQ_USER")
-	pass := os.Getenv("RABBITMQ_PASS")
-	host := os.Getenv("RABBITMQ_HOST")
-	port := os.Getenv("RABBITMQ_PORT")
-	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", user, pass, host, port)
-	conn, err := amqp.Dial(url)
+	conn, err := amqp.Dial(r.url)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ, err: %v", err)
 	}
