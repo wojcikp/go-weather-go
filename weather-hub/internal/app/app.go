@@ -5,26 +5,26 @@ import (
 	"log"
 
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
-	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
 	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
+	weatherfeedreceiver "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_receiver"
 	weatherscores "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_scores"
 )
 
 type App struct {
-	rabbitClient     *rabbitmqclient.RabbitClient
 	clickhouseClient *chclient.ClickhouseClient
+	feedReceiver     *weatherfeedreceiver.FeedReceiver
 	feedConsumer     *weatherfeedconsumer.Consumer
 	reader           scorereader.IScoreReader
 }
 
 func NewApp(
-	rabbitClient *rabbitmqclient.RabbitClient,
 	clickhouseClient *chclient.ClickhouseClient,
+	feedReceiver *weatherfeedreceiver.FeedReceiver,
 	feedConsumer *weatherfeedconsumer.Consumer,
 	reader scorereader.IScoreReader,
 ) *App {
-	return &App{rabbitClient, clickhouseClient, feedConsumer, reader}
+	return &App{clickhouseClient, feedReceiver, feedConsumer, reader}
 }
 
 func (app App) Run() {
@@ -32,16 +32,16 @@ func (app App) Run() {
 	done := make(chan struct{})
 	feedCounter := 0
 	go app.clickhouseClient.CreateWeatherTable()
-	go app.rabbitClient.ReceiveMessages(&feedCounter)
+	go app.feedReceiver.HandleReceiveMessages(&feedCounter)
 	for i := 0; i < 5; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go readScores(app.reader, app.clickhouseClient, done, &feedCounter)
+	go processScores(app.reader, app.clickhouseClient, done, &feedCounter)
 	forever := make(chan struct{})
 	<-forever
 }
 
-func readScores(
+func processScores(
 	reader scorereader.IScoreReader,
 	clickhouseClient *chclient.ClickhouseClient,
 	done chan struct{},
@@ -57,7 +57,7 @@ func readScores(
 		}
 		weatherscores.GetScoresInfo(stringScores, &scoresInfo, clickhouseClient)
 		weatherscores.GetScoresInfo(floatScores, &scoresInfo, clickhouseClient)
-		scorereader.ReadScores(reader, &scoresInfo)
+		reader.ReadScores(&scoresInfo)
 		*feedCounter = 0
 	}
 }
