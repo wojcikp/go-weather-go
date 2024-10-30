@@ -17,20 +17,21 @@ func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
 	return &RabbitClient{queue, url, weatherFeed}
 }
 
+func (r RabbitClient) ReceiveMessages(feedCounter *int) error {
 	conn, err := amqp.Dial(r.url)
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ, err: %v", err)
+		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
 	}
 	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open a channel, err: %v", err)
+		return fmt.Errorf("failed to open a channel, err: %w", err)
 	}
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		c.queue, // name
+		r.queue, // name
 		true,    // durable
 		false,   // delete when unused
 		false,   // exclusive
@@ -38,7 +39,7 @@ func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
 		nil,     // arguments
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare a queue, err: %v", err)
+		return fmt.Errorf("failed to declare a queue, err: %w", err)
 	}
 
 	msgs, err := ch.Consume(
@@ -51,18 +52,19 @@ func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
 		nil,    // args
 	)
 	if err != nil {
-		log.Fatalf("Failed to register a consumer, err: %v", err)
+		return fmt.Errorf("failed to register a consumer, err: %w", err)
 	}
 
 	forever := make(chan struct{})
 
 	go func() {
 		for data := range msgs {
-			c.weatherFeed <- data.Body
+			r.weatherFeed <- data.Body
 			*feedCounter++
 		}
 	}()
 
 	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
+	return nil
 }
