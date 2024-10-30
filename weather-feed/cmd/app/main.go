@@ -43,10 +43,9 @@ func initializeApp() (*app.App, error) {
 	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/",
 		os.Getenv("RABBITMQ_USER"), os.Getenv("RABBITMQ_PASS"),
 		os.Getenv("RABBITMQ_HOST"), os.Getenv("RABBITMQ_PORT"))
-	rabbitQueue := os.Getenv("RABBITMQ_QUEUE")
 	cityData := make(chan internal.CityWeatherData)
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
-	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(rabbitQueue, rabbitUrl)
+	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(os.Getenv("RABBITMQ_QUEUE"), rabbitUrl)
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 
