@@ -28,14 +28,17 @@ func (ws *BaseWeatherScore) GetId() int {
 	return ws.Id
 }
 
-func GetScoresInfo[T ScoreValue](scores []IWeatherScore[T], scoresInfo *bytes.Buffer, dbClient IDbClient) {
+func GetScoresInfo[T ScoreValue](scores []IWeatherScore[T], scoresInfo *bytes.Buffer, dbClient IDbClient) []error {
+	var errors []error
 	for _, score := range scores {
-		scoresInfo.WriteString(fmt.Sprintf("Id: %d\n", score.GetId()))
-		scoresInfo.WriteString(fmt.Sprintf("Name: %s\n", score.GetName()))
+		id := score.GetId()
+		name := score.GetName()
+		scoresInfo.WriteString(fmt.Sprintf("Id: %d\n", id))
+		scoresInfo.WriteString(fmt.Sprintf("Name: %s\n", name))
 		scoresInfo.WriteString("Value: ")
 		value, err := score.GetScore(dbClient)
 		if err != nil {
-			scoresInfo.WriteString(err.Error())
+			errors = append(errors, fmt.Errorf("ERROR: Score ID: %d, name: %s\nError: %v", id, name, err))
 		}
 		switch v := any(value).(type) {
 		case string:
@@ -47,4 +50,5 @@ func GetScoresInfo[T ScoreValue](scores []IWeatherScore[T], scoresInfo *bytes.Bu
 		}
 		scoresInfo.WriteString("-----------------------------\n")
 	}
+	return errors
 }

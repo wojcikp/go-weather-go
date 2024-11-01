@@ -55,8 +55,14 @@ func processScores(
 		for i := 0; i < *feedCounter-1; i++ {
 			<-done
 		}
-		weatherscores.GetScoresInfo(stringScores, &scoresInfo, clickhouseClient)
-		weatherscores.GetScoresInfo(floatScores, &scoresInfo, clickhouseClient)
+		errors := weatherscores.GetScoresInfo(stringScores, &scoresInfo, clickhouseClient)
+		errors = append(errors, weatherscores.GetScoresInfo(floatScores, &scoresInfo, clickhouseClient)...)
+		if len(errors) > 0 {
+			log.Print("ERROR: Some errors occured while reading scores info:")
+			for _, err := range errors {
+				log.Print(err)
+			}
+		}
 		reader.ReadScores(&scoresInfo)
 		*feedCounter = 0
 	}
