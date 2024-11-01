@@ -3,40 +3,35 @@ package rabbitmqclient
 import (
 	"fmt"
 	"log"
-	"os"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitClient struct {
 	queue       string
+	url         string
 	weatherFeed chan []byte
 }
 
-func NewRabbitClient(queue string, weatherFeed chan []byte) *RabbitClient {
-	return &RabbitClient{queue, weatherFeed}
+func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
+	return &RabbitClient{queue, url, weatherFeed}
 }
 
-func (c RabbitClient) ReceiveMessages(feedCounter *int) {
-	user := os.Getenv("RABBITMQ_USER")
-	pass := os.Getenv("RABBITMQ_PASS")
-	host := os.Getenv("RABBITMQ_HOST")
-	port := os.Getenv("RABBITMQ_PORT")
-	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", user, pass, host, port)
-	conn, err := amqp.Dial(url)
+func (r RabbitClient) ReceiveMessages(feedCounter *int) error {
+	conn, err := amqp.Dial(r.url)
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ, err: %v", err)
+		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
 	}
 	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open a channel, err: %v", err)
+		return fmt.Errorf("failed to open a channel, err: %w", err)
 	}
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		c.queue, // name
+		r.queue, // name
 		true,    // durable
 		false,   // delete when unused
 		false,   // exclusive
@@ -44,7 +39,7 @@ func (c RabbitClient) ReceiveMessages(feedCounter *int) {
 		nil,     // arguments
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare a queue, err: %v", err)
+		return fmt.Errorf("failed to declare a queue, err: %w", err)
 	}
 
 	msgs, err := ch.Consume(
@@ -57,18 +52,19 @@ func (c RabbitClient) ReceiveMessages(feedCounter *int) {
 		nil,    // args
 	)
 	if err != nil {
-		log.Fatalf("Failed to register a consumer, err: %v", err)
+		return fmt.Errorf("failed to register a consumer, err: %w", err)
 	}
 
 	forever := make(chan struct{})
 
 	go func() {
 		for data := range msgs {
-			c.weatherFeed <- data.Body
+			r.weatherFeed <- data.Body
 			*feedCounter++
 		}
 	}()
 
 	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
+	return nil
 }

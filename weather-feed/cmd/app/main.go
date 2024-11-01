@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/lpernett/godotenv"
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
@@ -13,16 +15,23 @@ import (
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 )
 
-const queueName = "queue1"
-
 func main() {
-	err := godotenv.Load("../../.env")
+	app, err := initializeApp()
 	if err != nil {
-		log.Fatalf("Error loading .env file, err: %v", err)
+		log.Fatalf("Application failed to start: %v", err)
+	}
+	app.Run()
+}
+
+func initializeApp() (*app.App, error) {
+	if err := godotenv.Load("../../.env"); err != nil {
+		return &app.App{}, fmt.Errorf("error loading .env file, err: %w", err)
 	}
 
-	cityData := make(chan internal.CityWeatherData)
-	config := config.GetConfig()
+	config, err := config.GetConfig()
+	if err != nil {
+		return &app.App{}, nil
+	}
 
 	var reader citiesreader.ICityReader
 	if config.MockCityInput {
@@ -31,11 +40,14 @@ func main() {
 		reader = citiesreader.NewReader()
 	}
 
+	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/",
+		os.Getenv("RABBITMQ_USER"), os.Getenv("RABBITMQ_PASS"),
+		os.Getenv("RABBITMQ_HOST"), os.Getenv("RABBITMQ_PORT"))
+	cityData := make(chan internal.CityWeatherData)
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
-	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(queueName)
+	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(os.Getenv("RABBITMQ_QUEUE"), rabbitUrl)
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 
-	app := app.NewApp(config, reader, rabbitClient, producer, consumer)
-	app.Run()
+	return app.NewApp(config, reader, rabbitClient, producer, consumer), nil
 }

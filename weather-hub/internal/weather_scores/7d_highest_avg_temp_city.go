@@ -2,6 +2,7 @@ package weatherscores
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -22,10 +23,14 @@ func (wc *HighestAvgTempCity7d[T]) GetQuery() string {
 		`SELECT
     		city,
     		avg(temperature) as avgTemp
-		FROM weather_database.testowa_dwa
+		FROM %s.%s
 		WHERE (time >= '%s 00:00:00') AND (time <= '%s 00:00:00')
 		GROUP BY city
-		ORDER BY avgTemp DESC`, startDate, today,
+		ORDER BY avgTemp DESC`,
+		os.Getenv("CLICKHOUSE_DB"),
+		os.Getenv("CLICKHOUSE_TABLE"),
+		startDate,
+		today,
 	)
 }
 
@@ -38,7 +43,7 @@ func (wc *HighestAvgTempCity7d[T]) GetScore(dbClient IDbClient) (T, error) {
 
 	rows, ok := data.(driver.Rows)
 	if !ok {
-		return empty, fmt.Errorf("return data is not clickhouse rows type, err: %s", err)
+		return empty, fmt.Errorf("return data is not clickhouse rows type, err: %w", err)
 	}
 	defer rows.Close()
 
