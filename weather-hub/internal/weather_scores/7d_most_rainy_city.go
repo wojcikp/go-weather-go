@@ -2,6 +2,7 @@ package weatherscores
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -22,12 +23,16 @@ func (wc *MostRainyCity7d[T]) GetQuery() string {
 		`SELECT
 			city,
 			count(*) AS code_count
-		FROM weather_database.testowa_dwa
+		FROM %s.%s
 		WHERE ((weather_code = 61) OR (weather_code = 63) OR (weather_code = 65)
 		OR (weather_code = 80) OR (weather_code = 81) OR (weather_code = 82))
 		AND ((time >= '%s 00:00:00') AND (time <= '%s 00:00:00'))
 		GROUP BY city
-		ORDER BY code_count DESC`, startDate, today,
+		ORDER BY code_count DESC`,
+		os.Getenv("CLICKHOUSE_DB"),
+		os.Getenv("CLICKHOUSE_TABLE"),
+		startDate,
+		today,
 	)
 }
 
@@ -40,7 +45,7 @@ func (wc *MostRainyCity7d[T]) GetScore(dbClient IDbClient) (T, error) {
 
 	rows, ok := data.(driver.Rows)
 	if !ok {
-		return empty, fmt.Errorf("return data is not clickhouse rows type, err: %s", err)
+		return empty, fmt.Errorf("return data is not clickhouse rows type, err: %w", err)
 	}
 	defer rows.Close()
 

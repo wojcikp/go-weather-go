@@ -13,10 +13,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type IApp interface {
-	Run()
-}
-
 type App struct {
 	config          config.Configuration
 	reader          citiesreader.ICityReader
