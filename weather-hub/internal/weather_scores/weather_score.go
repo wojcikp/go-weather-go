@@ -39,6 +39,7 @@ func GetScoresInfo[T ScoreValue](scores []IWeatherScore[T], scoresInfo *bytes.Bu
 		value, err := score.GetScore(dbClient)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("ERROR: Score ID: %d, name: %s\nError: %v", id, name, err))
+			scoresInfo.WriteString("Error occured")
 		}
 		switch v := any(value).(type) {
 		case string:
