@@ -17,14 +17,7 @@ func NewRabbitPublisher(queue, url string) *RabbitPublisher {
 	return &RabbitPublisher{queue, url}
 }
 
-func (r RabbitPublisher) ProcessWeatherData(data []byte) error {
-	if err := r.putMsgOnQueue(data); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r RabbitPublisher) putMsgOnQueue(msg []byte) error {
+func (r RabbitPublisher) ProcessWeatherData(msg []byte) error {
 	conn, err := amqp.Dial(r.url)
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
