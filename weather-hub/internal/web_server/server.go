@@ -9,7 +9,7 @@ import (
 )
 
 type ScoresServer struct {
-	scoresInfo []internal.ScoreInfo
+	currentScoresResponse []internal.ScoreInfo
 }
 
 func NewScoresServer() *ScoresServer {
@@ -17,10 +17,10 @@ func NewScoresServer() *ScoresServer {
 }
 
 func (s *ScoresServer) SetScoresInfo(scores []internal.ScoreInfo) {
-	s.scoresInfo = scores
+	s.currentScoresResponse = scores
 }
 
-func (s ScoresServer) RunWeatherScoresServer() {
+func (s *ScoresServer) RunWeatherScoresServer() {
 	http.HandleFunc("/scores", s.scoresHandler)
 
 	log.Println("Server is running on http://localhost:8081")
@@ -29,7 +29,7 @@ func (s ScoresServer) RunWeatherScoresServer() {
 	}
 }
 
-func (s ScoresServer) scoresHandler(w http.ResponseWriter, r *http.Request) {
+func (s *ScoresServer) scoresHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.URL.Path != "/scores" {
@@ -42,7 +42,7 @@ func (s ScoresServer) scoresHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(s.scoresInfo); err != nil {
+	if err := json.NewEncoder(w).Encode(s.currentScoresResponse); err != nil {
 		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 	}
 }
