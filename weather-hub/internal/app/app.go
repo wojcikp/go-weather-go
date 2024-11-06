@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
@@ -32,54 +33,69 @@ func NewApp(
 }
 
 func (app App) Run() {
-	log.Print("weather hub app run")
+	log.Print("Weather hub app run")
 	done := make(chan struct{})
 	feedCounter := 0
 	go app.clickhouseClient.CreateWeatherTable()
+	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 1; i++ {
 		go app.feedReceiver.HandleReceiveMessages(&feedCounter)
 	}
 	for i := 0; i < 5; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go processScores(app.reader, app.clickhouseClient, done, &feedCounter, app.server)
-	go app.server.RunWeatherScoresServer()
+	go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter)
 	forever := make(chan struct{})
 	<-forever
 }
 
 func processScores(
+	server *webserver.ScoresServer,
 	reader scorereader.IScoreReader,
 	clickhouseClient *chclient.ClickhouseClient,
 	done chan struct{},
 	feedCounter *int,
-	server *webserver.ScoresServer,
 ) {
 	stringScores := weatherscores.GetScoresList[string]()
 	floatScores := weatherscores.GetScoresList[float64]()
-	var scoresInfo bytes.Buffer
-	errors := []error{}
 	for {
 		<-done
 		for i := 0; i < *feedCounter-1; i++ {
 			<-done
 		}
-		stringScores, stringErrors := weatherscores.GetScoresInfo(stringScores, &scoresInfo, clickhouseClient)
-		floatScores, floatErrors := weatherscores.GetScoresInfo(floatScores, &scoresInfo, clickhouseClient)
+		responseScoresInfo := []internal.ScoreInfo{}
+		errors := []error{}
+		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
+		floatScoresInfo, floatErrors := weatherscores.GetScoresInfo(floatScores, clickhouseClient)
+		responseScoresInfo = append(responseScoresInfo, stringScoresInfo...)
+		responseScoresInfo = append(responseScoresInfo, floatScoresInfo...)
 		errors = append(errors, stringErrors...)
 		errors = append(errors, floatErrors...)
-		responseInfo := []internal.ScoreInfo{}
-		responseInfo = append(responseInfo, stringScores...)
-		responseInfo = append(responseInfo, floatScores...)
-		log.Print("responseInfo", responseInfo)
-		server.SetScoresInfo(responseInfo)
 		if len(errors) > 0 {
-			log.Print("ERROR: Some errors occured while reading scores info:")
+			log.Print("ERROR: Some errors occured while reading scores info: ")
 			for _, err := range errors {
 				log.Print(err)
 			}
+			*feedCounter = 0
+			return
 		}
-		reader.ReadScores(&scoresInfo)
+		publishScores(server, reader, responseScoresInfo)
 		*feedCounter = 0
 	}
+}
+
+func publishScores(
+	server *webserver.ScoresServer,
+	reader scorereader.IScoreReader,
+	scoresInfo []internal.ScoreInfo,
+) {
+	var scoresInfoMessage bytes.Buffer
+	for _, score := range scoresInfo {
+		scoresInfoMessage.WriteString(fmt.Sprintf("Id: %d\n", score.Id))
+		scoresInfoMessage.WriteString(fmt.Sprintf("Name: %s\n", score.Name))
+		scoresInfoMessage.WriteString(fmt.Sprintf("Value: %s\n", score.Value))
+		scoresInfoMessage.WriteString("-----------------------------\n")
+	}
+	server.SetScoresInfo(scoresInfo)
+	reader.ReadScores(&scoresInfoMessage)
 }
