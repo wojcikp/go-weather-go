@@ -13,6 +13,7 @@ import (
 	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
 	weatherfeedreceiver "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_receiver"
+	webserver "github.com/wojcikp/go-weather-go/weather-hub/internal/web_server"
 )
 
 var rabbitUser, rabbitPass, rabbitHost, rabbitPort, rabbitQueue string
@@ -41,6 +42,9 @@ func initializeApp() (*app.App, error) {
 	receiver := weatherfeedreceiver.NewFeedReceiver(rabbit)
 	consumer := weatherfeedconsumer.NewWeatherFeedConsumer(weatherFeed)
 	reader := scorereader.NewConsoleScoreReader()
+	server := webserver.NewScoresServer()
+	return app.NewApp(clickhouse, receiver, consumer, reader, server), nil
+}
 
 func setEnvs() error {
 	rabbitUser = os.Getenv("RABBITMQ_USER")
