@@ -15,6 +15,7 @@ func GetScoresList[T ScoreValue]() []IWeatherScore[T] {
 		return []IWeatherScore[T]{
 			&HighestAvgTempCity7d[T]{BaseWeatherScore{Id: nextId()}},
 			&MostRainyCity7d[T]{BaseWeatherScore{Id: nextId()}},
+			&MostRainyCity31d[T]{BaseWeatherScore{Id: nextId()}},
 		}
 	case float64:
 		return []IWeatherScore[T]{
