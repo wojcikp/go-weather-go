@@ -2,10 +2,9 @@ package weatherscores
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
-
-	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 type MostRainyCity7d[T ScoreValue] struct {
@@ -48,37 +47,19 @@ func (wc *MostRainyCity7d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreValue,
 		return empty, err
 	}
 
-	data, err := dbClient.QueryDb(query)
+	results, err := wc.GetQueryResults(dbClient, query)
 	if err != nil {
-		return empty, err
+		log.Print("ERROR GetQueryResults: ", err)
 	}
 
-	rows, ok := data.(driver.Rows)
-	if !ok {
-		return empty, fmt.Errorf("return data is not clickhouse rows type, err: %w", err)
-	}
-	defer rows.Close()
-
-	var cities []string
-	for rows.Next() {
-		var (
-			city      string
-			codeCount uint64
-		)
-		if err := rows.Scan(&city, &codeCount); err != nil {
-			return empty, err
-		}
-		cities = append(cities, city)
-	}
-
-	if len(cities) == 0 {
-		if noRainMessage, ok := any("No rainy days in the past 7 days.").(ScoreValue); ok {
+	if len(results) == 0 {
+		if noRainMessage, ok := any("No rain in the past 7 days.").(ScoreValue); ok {
 			empty = noRainMessage
 		}
 		return empty, err
 	}
 
-	score, ok := any(cities[0]).(ScoreValue)
+	score, ok := any(results[0][0]).(ScoreValue)
 	if !ok {
 		return empty, fmt.Errorf("wrong data type for score %s with id: %d", wc.GetName(), wc.GetId())
 	}

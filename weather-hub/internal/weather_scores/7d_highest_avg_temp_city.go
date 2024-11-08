@@ -2,10 +2,9 @@ package weatherscores
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
-
-	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 type HighestAvgTempCity7d[T ScoreValue] struct {
@@ -46,34 +45,16 @@ func (wc *HighestAvgTempCity7d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreV
 		return empty, err
 	}
 
-	data, err := dbClient.QueryDb(query)
+	results, err := wc.GetQueryResults(dbClient, query)
 	if err != nil {
+		log.Print("ERROR GetQueryResults: ", err)
+	}
+
+	if len(results) == 0 {
 		return empty, err
 	}
 
-	rows, ok := data.(driver.Rows)
-	if !ok {
-		return empty, fmt.Errorf("return data is not clickhouse rows type, err: %w", err)
-	}
-	defer rows.Close()
-
-	var cities []string
-	for rows.Next() {
-		var (
-			city    string
-			avgTemp float64
-		)
-		if err := rows.Scan(&city, &avgTemp); err != nil {
-			return empty, err
-		}
-		cities = append(cities, city)
-	}
-
-	if len(cities) == 0 {
-		return empty, err
-	}
-
-	score, ok := any(cities[0]).(ScoreValue)
+	score, ok := any(results[0][0]).(ScoreValue)
 	if !ok {
 		return empty, fmt.Errorf("wrong data type for score %s with id: %d", wc.GetName(), wc.GetId())
 	}

@@ -2,7 +2,10 @@ package weatherscores
 
 import (
 	"fmt"
+	"reflect"
+	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 )
 
@@ -27,6 +30,48 @@ type BaseWeatherScore struct {
 
 func (ws *BaseWeatherScore) GetId() int {
 	return ws.Id
+}
+
+func (ws *BaseWeatherScore) GetQueryResults(dbClient IDbClient, query string) ([][]interface{}, error) {
+	var results [][]interface{}
+
+	data, err := dbClient.QueryDb(query)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, ok := data.(driver.Rows)
+	if !ok {
+		return nil, fmt.Errorf("return data is not clickhouse rows type, err: %w", err)
+	}
+	defer rows.Close()
+	var (
+		columnTypes = rows.ColumnTypes()
+		vars        = make([]interface{}, len(columnTypes))
+	)
+	for i := range columnTypes {
+		vars[i] = reflect.New(columnTypes[i].ScanType()).Interface()
+	}
+	for rows.Next() {
+		if err := rows.Scan(vars...); err != nil {
+			return nil, err
+		}
+		row := make([]interface{}, len(vars))
+		for i, v := range vars {
+			switch v := v.(type) {
+			case *string:
+				row[i] = *v
+			case *uint64:
+				row[i] = *v
+			case *float64:
+				row[i] = *v
+			case *time.Time:
+				row[i] = *v
+			}
+		}
+		results = append(results, row)
+	}
+	return results, nil
 }
 
 func GetScoresInfo[T ScoreValue](scores []IWeatherScore[T], dbClient IDbClient) ([]internal.ScoreInfo, []error) {
