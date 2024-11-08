@@ -16,7 +16,7 @@ import (
 	webserver "github.com/wojcikp/go-weather-go/weather-hub/internal/web_server"
 )
 
-var rabbitUser, rabbitPass, rabbitHost, rabbitPort, rabbitQueue string
+var rabbitUser, rabbitPass, rabbitHost, rabbitPort, rabbitQueue, clickhouseDb, clickhouseTable string
 
 func main() {
 	app, err := initializeApp()
@@ -38,7 +38,7 @@ func initializeApp() (*app.App, error) {
 	weatherFeed := make(chan []byte)
 	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitUser, rabbitPass, rabbitHost, rabbitPort)
 	rabbit := rabbitmqclient.NewRabbitClient(rabbitQueue, rabbitUrl, weatherFeed)
-	clickhouse := chclient.NewClickhouseClient()
+	clickhouse := chclient.NewClickhouseClient(clickhouseDb, clickhouseTable)
 	receiver := weatherfeedreceiver.NewFeedReceiver(rabbit)
 	consumer := weatherfeedconsumer.NewWeatherFeedConsumer(weatherFeed)
 	reader := scorereader.NewConsoleScoreReader()
@@ -66,6 +66,14 @@ func setEnvs() error {
 	rabbitQueue = os.Getenv("RABBITMQ_QUEUE")
 	if rabbitQueue == "" {
 		return errors.New("env 'RABBITMQ_QUEUE' was empty")
+	}
+	clickhouseDb = os.Getenv("CLICKHOUSE_DB")
+	if clickhouseDb == "" {
+		return errors.New("env 'CLICKHOUSE_DB' was empty")
+	}
+	clickhouseTable = os.Getenv("CLICKHOUSE_TABLE")
+	if clickhouseTable == "" {
+		return errors.New("env 'CLICKHOUSE_TABLE' was empty")
 	}
 	return nil
 }
