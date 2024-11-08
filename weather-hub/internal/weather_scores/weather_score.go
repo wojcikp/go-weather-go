@@ -17,7 +17,7 @@ type ScoreValue interface {
 type IWeatherScore[T ScoreValue] interface {
 	GetId() int
 	GetName() string
-	GetQuery() string
+	GetQuery() (string, error)
 	GetScore(dbClient IDbClient) (T, error)
 }
 
