@@ -63,6 +63,7 @@ func processScores(
 		for i := 0; i < *feedCounter-1; i++ {
 			<-done
 		}
+		log.Print("Processing scores...")
 		responseScoresInfo := []internal.ScoreInfo{}
 		errors := []error{}
 		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
@@ -76,8 +77,6 @@ func processScores(
 			for _, err := range errors {
 				log.Print(err)
 			}
-			*feedCounter = 0
-			return
 		}
 		publishScores(server, reader, responseScoresInfo)
 		*feedCounter = 0
