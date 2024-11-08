@@ -72,6 +72,9 @@ func (wc *MostRainyCity7d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreValue,
 	}
 
 	if len(cities) == 0 {
+		if noRainMessage, ok := any("No rainy days in the past 7 days.").(ScoreValue); ok {
+			empty = noRainMessage
+		}
 		return empty, err
 	}
 
