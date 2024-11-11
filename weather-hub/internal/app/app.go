@@ -2,13 +2,16 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 
+	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
 	weatherfeedreceiver "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_receiver"
 	weatherscores "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_scores"
+	webserver "github.com/wojcikp/go-weather-go/weather-hub/internal/web_server"
 )
 
 type App struct {
@@ -16,6 +19,7 @@ type App struct {
 	feedReceiver     *weatherfeedreceiver.FeedReceiver
 	feedConsumer     *weatherfeedconsumer.Consumer
 	reader           scorereader.IScoreReader
+	server           *webserver.ScoresServer
 }
 
 func NewApp(
@@ -23,25 +27,30 @@ func NewApp(
 	feedReceiver *weatherfeedreceiver.FeedReceiver,
 	feedConsumer *weatherfeedconsumer.Consumer,
 	reader scorereader.IScoreReader,
+	server *webserver.ScoresServer,
 ) *App {
-	return &App{clickhouseClient, feedReceiver, feedConsumer, reader}
+	return &App{clickhouseClient, feedReceiver, feedConsumer, reader, server}
 }
 
 func (app App) Run() {
-	log.Print("weather hub app run")
+	log.Print("Weather hub app run")
 	done := make(chan struct{})
 	feedCounter := 0
 	go app.clickhouseClient.CreateWeatherTable()
-	go app.feedReceiver.HandleReceiveMessages(&feedCounter)
+	go app.server.RunWeatherScoresServer()
+	for i := 0; i < 1; i++ {
+		go app.feedReceiver.HandleReceiveMessages(&feedCounter)
+	}
 	for i := 0; i < 5; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go processScores(app.reader, app.clickhouseClient, done, &feedCounter)
+	go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter)
 	forever := make(chan struct{})
 	<-forever
 }
 
 func processScores(
+	server *webserver.ScoresServer,
 	reader scorereader.IScoreReader,
 	clickhouseClient *chclient.ClickhouseClient,
 	done chan struct{},
@@ -49,21 +58,43 @@ func processScores(
 ) {
 	stringScores := weatherscores.GetScoresList[string]()
 	floatScores := weatherscores.GetScoresList[float64]()
-	var scoresInfo bytes.Buffer
 	for {
 		<-done
 		for i := 0; i < *feedCounter-1; i++ {
 			<-done
 		}
-		errors := weatherscores.GetScoresInfo(stringScores, &scoresInfo, clickhouseClient)
-		errors = append(errors, weatherscores.GetScoresInfo(floatScores, &scoresInfo, clickhouseClient)...)
+		log.Print("Processing scores...")
+		responseScoresInfo := []internal.ScoreInfo{}
+		errors := []error{}
+		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
+		floatScoresInfo, floatErrors := weatherscores.GetScoresInfo(floatScores, clickhouseClient)
+		responseScoresInfo = append(responseScoresInfo, stringScoresInfo...)
+		responseScoresInfo = append(responseScoresInfo, floatScoresInfo...)
+		errors = append(errors, stringErrors...)
+		errors = append(errors, floatErrors...)
 		if len(errors) > 0 {
-			log.Print("ERROR: Some errors occured while reading scores info:")
+			log.Print("ERROR: Some errors occured while reading scores info: ")
 			for _, err := range errors {
 				log.Print(err)
 			}
 		}
-		reader.ReadScores(&scoresInfo)
+		publishScores(server, reader, responseScoresInfo)
 		*feedCounter = 0
 	}
+}
+
+func publishScores(
+	server *webserver.ScoresServer,
+	reader scorereader.IScoreReader,
+	scoresInfo []internal.ScoreInfo,
+) {
+	var scoresInfoMessage bytes.Buffer
+	for _, score := range scoresInfo {
+		scoresInfoMessage.WriteString(fmt.Sprintf("Id: %d\n", score.Id))
+		scoresInfoMessage.WriteString(fmt.Sprintf("Name: %s\n", score.Name))
+		scoresInfoMessage.WriteString(fmt.Sprintf("Value: %s\n", score.Value))
+		scoresInfoMessage.WriteString("-----------------------------\n")
+	}
+	server.SetScoresInfo(scoresInfo)
+	reader.ReadScores(&scoresInfoMessage)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -14,6 +15,8 @@ import (
 	rabbitmqpublisher "github.com/wojcikp/go-weather-go/weather-feed/internal/rabbitmq_publisher"
 	weatherdataworkers "github.com/wojcikp/go-weather-go/weather-feed/internal/weather_data_workers"
 )
+
+var rabbitUser, rabbitPass, rabbitHost, rabbitPort, rabbitQueue string
 
 func main() {
 	app, err := initializeApp()
@@ -33,6 +36,11 @@ func initializeApp() (*app.App, error) {
 		return &app.App{}, nil
 	}
 
+	err = setEnvs()
+	if err != nil {
+		return &app.App{}, fmt.Errorf("setting env variables error: %w", err)
+	}
+
 	var reader citiesreader.ICityReader
 	if config.MockCityInput {
 		reader = citiesreader.NewReaderMock()
@@ -40,14 +48,36 @@ func initializeApp() (*app.App, error) {
 		reader = citiesreader.NewReader()
 	}
 
-	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/",
-		os.Getenv("RABBITMQ_USER"), os.Getenv("RABBITMQ_PASS"),
-		os.Getenv("RABBITMQ_HOST"), os.Getenv("RABBITMQ_PORT"))
+	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitUser, rabbitPass, rabbitHost, rabbitPort)
 	cityData := make(chan internal.CityWeatherData)
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
-	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(os.Getenv("RABBITMQ_QUEUE"), rabbitUrl)
+	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(rabbitQueue, rabbitUrl)
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 
 	return app.NewApp(config, reader, rabbitClient, producer, consumer), nil
+}
+
+func setEnvs() error {
+	rabbitUser = os.Getenv("RABBITMQ_USER")
+	if rabbitUser == "" {
+		return errors.New("env 'RABBITMQ_USER' was empty")
+	}
+	rabbitPass = os.Getenv("RABBITMQ_PASS")
+	if rabbitPass == "" {
+		return errors.New("env 'RABBITMQ_PASS' was empty")
+	}
+	rabbitHost = os.Getenv("RABBITMQ_HOST")
+	if rabbitHost == "" {
+		return errors.New("env 'RABBITMQ_HOST' was empty")
+	}
+	rabbitPort = os.Getenv("RABBITMQ_PORT")
+	if rabbitPort == "" {
+		return errors.New("env 'RABBITMQ_PORT' was empty")
+	}
+	rabbitQueue = os.Getenv("RABBITMQ_QUEUE")
+	if rabbitQueue == "" {
+		return errors.New("env 'RABBITMQ_QUEUE' was empty")
+	}
+	return nil
 }

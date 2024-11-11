@@ -12,3 +12,9 @@ type CityWeatherData struct {
 	WeatherCodes []int
 	ErrorMsg     string
 }
+
+type ScoreInfo struct {
+	Id    int
+	Name  string
+	Value string
+}

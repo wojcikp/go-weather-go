@@ -7,30 +7,29 @@ import (
 	"time"
 )
 
-type HighestAvgTempCity7d[T ScoreValue] struct {
+type AvgTemperatureWarsaw14d[T ScoreValue] struct {
 	BaseWeatherScore
 }
 
-func (wc *HighestAvgTempCity7d[ScoreValue]) GetName() string {
-	return "Highest_Avg_Temp_City_7d"
+func (wc *AvgTemperatureWarsaw14d[ScoreValue]) GetName() string {
+	return "Average_Temperature_Warsaw_Last_14_Days"
 }
 
-func (wc *HighestAvgTempCity7d[ScoreValue]) GetQuery() (string, error) {
+func (wc *AvgTemperatureWarsaw14d[ScoreValue]) GetQuery() (string, error) {
 	db := os.Getenv("CLICKHOUSE_DB")
 	table := os.Getenv("CLICKHOUSE_TABLE")
 	if db == "" || table == "" {
 		return "", fmt.Errorf("missing CLICKHOUSE_DB or CLICKHOUSE_TABLE os envs, db: %s, table: %s", db, table)
 	}
-	startDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
+	startDate := time.Now().AddDate(0, 0, -14).Format("2006-01-02")
 	today := time.Now().Format("2006-01-02")
 	return fmt.Sprintf(
 		`SELECT
     		city,
-    		avg(temperature) as avgTemp
+    		avg(temperature) AS avg_temp
 		FROM %s.%s
-		WHERE (time >= '%s 00:00:00') AND (time <= '%s 00:00:00')
-		GROUP BY city
-		ORDER BY avgTemp DESC`,
+		WHERE (time >= '%s 00:00:00') AND (time <= '%s 00:00:00') AND (city = 'Warsaw')
+		GROUP BY city`,
 		db,
 		table,
 		startDate,
@@ -38,7 +37,7 @@ func (wc *HighestAvgTempCity7d[ScoreValue]) GetQuery() (string, error) {
 	), nil
 }
 
-func (wc *HighestAvgTempCity7d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreValue, error) {
+func (wc *AvgTemperatureWarsaw14d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreValue, error) {
 	var empty ScoreValue
 	query, err := wc.GetQuery()
 	if err != nil {
@@ -54,7 +53,7 @@ func (wc *HighestAvgTempCity7d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreV
 		return empty, err
 	}
 
-	score, ok := any(results[0][0]).(ScoreValue)
+	score, ok := any(results[0][1]).(ScoreValue)
 	if !ok {
 		return empty, fmt.Errorf("wrong data type for score %s with id: %d", wc.GetName(), wc.GetId())
 	}

@@ -13,14 +13,16 @@ import (
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 )
 
-type ClickhouseClient struct{}
+type ClickhouseClient struct {
+	db    string
+	table string
+}
 
-func NewClickhouseClient() *ClickhouseClient {
-	return &ClickhouseClient{}
+func NewClickhouseClient(db, table string) *ClickhouseClient {
+	return &ClickhouseClient{db, table}
 }
 
 func (c ClickhouseClient) CreateWeatherTable() {
-	db, table := os.Getenv("CLICKHOUSE_DB"), os.Getenv("CLICKHOUSE_TABLE")
 	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s
 	(
 		city String NOT NULL,
@@ -30,10 +32,10 @@ func (c ClickhouseClient) CreateWeatherTable() {
 		weather_code Int64
 	)
 	ENGINE = ReplacingMergeTree
-	PRIMARY KEY (city, time)`, db, table)
+	PRIMARY KEY (city, time)`, c.db, c.table)
 	err := c.ExecQueryDb(q)
 	if err != nil {
-		log.Fatalf("Creating table: %s in clickhouse db: %s failed due to following error: %v.\nexecuted query: %s", table, db, err, q)
+		log.Fatalf("Creating table: %s in clickhouse db: %s failed due to following error: %v.\nexecuted query: %s", c.table, c.db, err, q)
 	}
 }
 
@@ -49,8 +51,8 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 		for i := 0; i < len(data.Time); i++ {
 			q := fmt.Sprintf(
 				"INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
-				os.Getenv("CLICKHOUSE_DB"),
-				os.Getenv("CLICKHOUSE_TABLE"),
+				c.db,
+				c.table,
 				data.Name,
 				data.Time[i].Format(time.DateTime),
 				data.Temperatures[i],
@@ -69,7 +71,7 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 }
 
 func (c ClickhouseClient) ExecQueryDb(query string) error {
-	conn, err := connect()
+	conn, err := connect(c.db)
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,7 @@ func (c ClickhouseClient) ExecQueryDb(query string) error {
 }
 
 func (c ClickhouseClient) QueryDb(query string) (any, error) {
-	conn, err := connect()
+	conn, err := connect(c.db)
 	if err != nil {
 		return nil, err
 	}
@@ -100,16 +102,20 @@ func (c ClickhouseClient) QueryDb(query string) (any, error) {
 	return rows, nil
 }
 
-func connect() (driver.Conn, error) {
-	db := os.Getenv("CLICKHOUSE_DB")
+func connect(db string) (driver.Conn, error) {
 	host := os.Getenv("CLICKHOUSE_HOST")
 	port := os.Getenv("CLICKHOUSE_PORT")
+	user := os.Getenv("CLICKHOUSE_USER")
+	pass := os.Getenv("CLICKHOUSE_PASS")
+	if host == "" || port == "" || user == "" || pass == "" {
+		return nil, fmt.Errorf("missing db credentials - host: %s, port: %s, user: %s, pass: %s", host, port, user, pass)
+	}
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{fmt.Sprintf("%s:%s", host, port)},
 		Auth: clickhouse.Auth{
 			Database: db,
-			Username: os.Getenv("CLICKHOUSE_USER"),
-			Password: os.Getenv("CLICKHOUSE_PASS"),
+			Username: user,
+			Password: pass,
 		},
 		DialContext: func(ctx context.Context, addr string) (net.Conn, error) {
 			var d net.Dialer
