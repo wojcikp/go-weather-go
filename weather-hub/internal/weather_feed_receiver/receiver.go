@@ -1,9 +1,12 @@
 package weatherfeedreceiver
 
-import "log"
+import (
+	"log"
+	"sync"
+)
 
 type IFeedReceiver interface {
-	ReceiveMessages(feedCounter *int) error
+	ReceiveMessages(feedCounter *int, mu *sync.Mutex) error
 }
 
 type FeedReceiver struct {
@@ -14,8 +17,8 @@ func NewFeedReceiver(receiver IFeedReceiver) *FeedReceiver {
 	return &FeedReceiver{receiver}
 }
 
-func (r FeedReceiver) HandleReceiveMessages(feedCounter *int) {
-	if err := r.receiver.ReceiveMessages(feedCounter); err != nil {
+func (r FeedReceiver) HandleReceiveMessages(feedCounter *int, mu *sync.Mutex) {
+	if err := r.receiver.ReceiveMessages(feedCounter, mu); err != nil {
 		log.Printf("ERROR: Failed to receive weather feed messages due to following error: %v", err)
 	}
 }
