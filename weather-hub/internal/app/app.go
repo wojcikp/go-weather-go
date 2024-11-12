@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
@@ -36,15 +37,16 @@ func (app App) Run() {
 	log.Print("Weather hub app run")
 	done := make(chan struct{})
 	feedCounter := 0
+	var mu sync.Mutex
 	go app.clickhouseClient.CreateWeatherTable()
 	go app.server.RunWeatherScoresServer()
-	for i := 0; i < 1; i++ {
-		go app.feedReceiver.HandleReceiveMessages(&feedCounter)
+	for i := 0; i < 5; i++ {
+		go app.feedReceiver.HandleReceiveMessages(&feedCounter, &mu)
 	}
 	for i := 0; i < 5; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter)
+	go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter, &mu)
 	forever := make(chan struct{})
 	<-forever
 }
@@ -55,6 +57,7 @@ func processScores(
 	clickhouseClient *chclient.ClickhouseClient,
 	done chan struct{},
 	feedCounter *int,
+	mu *sync.Mutex,
 ) {
 	stringScores := weatherscores.GetScoresList[string]()
 	floatScores := weatherscores.GetScoresList[float64]()
@@ -79,7 +82,9 @@ func processScores(
 			}
 		}
 		publishScores(server, reader, responseScoresInfo)
+		mu.Lock()
 		*feedCounter = 0
+		mu.Unlock()
 	}
 }
 
