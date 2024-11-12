@@ -13,12 +13,12 @@ import (
 
 type ApiDataProducer struct {
 	apiClient apiclient.WeatherApiClient
-	CityData  chan internal.CityWeatherData
+	CityData  chan internal.CityWeatherDataSingle
 }
 
 func NewApiDataProducer(
 	apiClient apiclient.WeatherApiClient,
-	CityData chan internal.CityWeatherData,
+	CityData chan internal.CityWeatherDataSingle,
 ) *ApiDataProducer {
 	return &ApiDataProducer{apiClient, CityData}
 }
@@ -37,24 +37,27 @@ func (w ApiDataProducer) Work(ctx context.Context, city internal.BaseCityInfo, w
 		weatherData, err = w.apiClient.FetchData(ctx, city)
 		if i == maxRetries-1 {
 			log.Printf("ERROR: Last attempt to fetch data for city: %s failed. Putting on queue empty data for this city.", city.Name)
-			w.CityData <- internal.CityWeatherData{
-				Name:         city.Name,
-				Time:         []internal.CustomTime{},
-				Temperatures: []float64{},
-				WindSpeed:    []float64{},
-				WeatherCodes: []int{},
-				ErrorMsg:     err.Error(),
+			w.CityData <- internal.CityWeatherDataSingle{
+				Name:        city.Name,
+				Time:        internal.CustomTime{},
+				Temperature: 0.0,
+				WindSpeed:   0.0,
+				WeatherCode: 0,
+				ErrorMsg:    err.Error(),
 			}
 		}
 	}
 	if err == nil {
-		w.CityData <- internal.CityWeatherData{
-			Name:         city.Name,
-			Time:         weatherData.Hourly.Time,
-			Temperatures: weatherData.Hourly.Temperature2m,
-			WindSpeed:    weatherData.Hourly.WindSpeed,
-			WeatherCodes: weatherData.Hourly.WeatherCode,
-			ErrorMsg:     "",
+		for i := 0; i < len(weatherData.Hourly.Time); i++ {
+			w.CityData <- internal.CityWeatherDataSingle{
+				Name:        city.Name,
+				Time:        weatherData.Hourly.Time[i],
+				Temperature: weatherData.Hourly.Temperature2m[i],
+				WindSpeed:   weatherData.Hourly.WindSpeed[i],
+				WeatherCode: weatherData.Hourly.WeatherCode[i],
+				ErrorMsg:    "",
+			}
+
 		}
 	}
 }

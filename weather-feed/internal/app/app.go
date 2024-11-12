@@ -39,7 +39,7 @@ func (app App) Run() {
 	}
 
 	wgp := &sync.WaitGroup{}
-	sem := semaphore.NewWeighted(5)
+	sem := semaphore.NewWeighted(30)
 	for _, city := range cities {
 		wgp.Add(1)
 		go func(city internal.BaseCityInfo) {

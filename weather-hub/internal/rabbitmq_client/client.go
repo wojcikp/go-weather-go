@@ -2,7 +2,6 @@ package rabbitmqclient
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -67,7 +66,6 @@ func (r RabbitClient) ReceiveMessages(feedCounter *int, mu *sync.Mutex) error {
 		}
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
 	return nil
 }

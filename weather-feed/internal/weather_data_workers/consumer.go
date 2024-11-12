@@ -13,10 +13,10 @@ type IWeatherDataConsumer interface {
 }
 
 type Consumer struct {
-	cityData chan internal.CityWeatherData
+	cityData chan internal.CityWeatherDataSingle
 }
 
-func NewWeatherDataConsumer(cityData chan internal.CityWeatherData) *Consumer {
+func NewWeatherDataConsumer(cityData chan internal.CityWeatherDataSingle) *Consumer {
 	return &Consumer{cityData}
 }
 

@@ -39,7 +39,7 @@ func (c ClickhouseClient) CreateWeatherTable() {
 	}
 }
 
-func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
+func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherDataSingle) {
 	if len(data.ErrorMsg) > 0 {
 		log.Printf(
 			"Weather data feed for following city: %s contains error: %s\nSkipping clickhouse insert based on this feed",
@@ -47,28 +47,52 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 			data.ErrorMsg,
 		)
 	} else {
-		var executeQueryErrors []error
-		for i := 0; i < len(data.Time); i++ {
-			q := fmt.Sprintf(
-				"INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
-				c.db,
-				c.table,
-				data.Name,
-				data.Time[i].Format(time.DateTime),
-				data.Temperatures[i],
-				data.WindSpeed[i],
-				data.WeatherCodes[i],
-			)
-			if err := c.ExecQueryDb(q); err != nil {
-				executeQueryErrors = append(executeQueryErrors, err)
-			}
+		q := fmt.Sprintf(
+			"INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
+			c.db,
+			c.table,
+			data.Name,
+			data.Time.Format(time.DateTime),
+			data.Temperature,
+			data.WindSpeed,
+			data.WeatherCode,
+		)
+		if err := c.ExecQueryDb(q); err != nil {
+			log.Print("ERROR: CH insert err: ", err)
 		}
-		if len(executeQueryErrors) > 0 {
-			log.Printf("ERROR: Processing weather feed for city: %s failed. Errors: %v", data.Name, executeQueryErrors)
-		}
-		log.Printf("Processed data feed for city: %s", data.Name)
 	}
 }
+
+// func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
+// 	if len(data.ErrorMsg) > 0 {
+// 		log.Printf(
+// 			"Weather data feed for following city: %s contains error: %s\nSkipping clickhouse insert based on this feed",
+// 			data.Name,
+// 			data.ErrorMsg,
+// 		)
+// 	} else {
+// 		var executeQueryErrors []error
+// 		for i := 0; i < len(data.Time); i++ {
+// 			q := fmt.Sprintf(
+// 				"INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
+// 				c.db,
+// 				c.table,
+// 				data.Name,
+// 				data.Time[i].Format(time.DateTime),
+// 				data.Temperatures[i],
+// 				data.WindSpeed[i],
+// 				data.WeatherCodes[i],
+// 			)
+// 			if err := c.ExecQueryDb(q); err != nil {
+// 				executeQueryErrors = append(executeQueryErrors, err)
+// 			}
+// 		}
+// 		if len(executeQueryErrors) > 0 {
+// 			log.Printf("ERROR: Processing weather feed for city: %s failed. Errors: %v", data.Name, executeQueryErrors)
+// 		}
+// 		log.Printf("Processed data feed for city: %s", data.Name)
+// 	}
+// }
 
 func (c ClickhouseClient) ExecQueryDb(query string) error {
 	conn, err := connect(c.db)

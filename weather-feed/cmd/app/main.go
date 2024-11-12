@@ -49,7 +49,7 @@ func initializeApp() (*app.App, error) {
 	}
 
 	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitUser, rabbitPass, rabbitHost, rabbitPort)
-	cityData := make(chan internal.CityWeatherData)
+	cityData := make(chan internal.CityWeatherDataSingle)
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
 	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(rabbitQueue, rabbitUrl)
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)

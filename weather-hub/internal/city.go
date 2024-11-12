@@ -13,6 +13,15 @@ type CityWeatherData struct {
 	ErrorMsg     string
 }
 
+type CityWeatherDataSingle struct {
+	Name        string
+	Time        time.Time
+	Temperature float64
+	WindSpeed   float64
+	WeatherCode int
+	ErrorMsg    string
+}
+
 type ScoreInfo struct {
 	Id    int
 	Name  string

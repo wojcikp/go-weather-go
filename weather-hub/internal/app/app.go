@@ -35,18 +35,23 @@ func NewApp(
 
 func (app App) Run() {
 	log.Print("Weather hub app run")
+	log.Print("Waiting for messages...")
 	done := make(chan struct{})
 	feedCounter := 0
 	var mu sync.Mutex
 	go app.clickhouseClient.CreateWeatherTable()
 	go app.server.RunWeatherScoresServer()
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 100; i++ {
 		go app.feedReceiver.HandleReceiveMessages(&feedCounter, &mu)
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 120; i++ {
+		// wg.Add(1)
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter, &mu)
+	go func() {
+		// wg.Wait()
+		go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter, &mu)
+	}()
 	forever := make(chan struct{})
 	<-forever
 }
