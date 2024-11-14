@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  weather-feed:
+    build:
+      context: ./weather-feed
+    depends_on:
+      - rabbitmq
+      - clickhouse
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_DEFAULT_USER=user1
+      - RABBITMQ_DEFAULT_PASS=pass1
+      - RABBITMQ_QUEUE=queue1
+
+
+  weather-hub:
+    build:
+      context: ./weather-hub
+    ports:
+      - "8081:8081"
+    depends_on:
+      - rabbitmq
+      - clickhouse
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_DEFAULT_USER=user1
+      - RABBITMQ_DEFAULT_PASS=pass1
+      - RABBITMQ_QUEUE=queue1
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_USER=user1
+      - CLICKHOUSE_PASS=pass1
+      - CLICKHOUSE_DB=weather_database
+      - CLICKHOUSE_TABLE=weather_scores
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=user1
+      - RABBITMQ_DEFAULT_PASS=pass1
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./data.tsv:/docker-entrypoint-initdb.d/data.tsv
+      - ./data-loader.sh:/docker-entrypoint-initdb.d/data-loader.sh
+    entrypoint: /docker-entrypoint-initdb.d/data-loader.sh

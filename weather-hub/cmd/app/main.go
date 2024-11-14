@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/lpernett/godotenv"
 	"github.com/wojcikp/go-weather-go/weather-hub/internal/app"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
@@ -27,11 +26,11 @@ func main() {
 }
 
 func initializeApp() (*app.App, error) {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		return &app.App{}, fmt.Errorf("error loading .env file, err: %w", err)
-	}
-	err = setEnvs()
+	// err := godotenv.Load("../../.env")
+	// if err != nil {
+	// 	return &app.App{}, fmt.Errorf("error loading .env file, err: %w", err)
+	// }
+	err := setEnvs()
 	if err != nil {
 		return &app.App{}, fmt.Errorf("setting env variables error: %w", err)
 	}
@@ -47,13 +46,13 @@ func initializeApp() (*app.App, error) {
 }
 
 func setEnvs() error {
-	rabbitUser = os.Getenv("RABBITMQ_USER")
+	rabbitUser = os.Getenv("RABBITMQ_DEFAULT_USER")
 	if rabbitUser == "" {
-		return errors.New("env 'RABBITMQ_USER' was empty")
+		return errors.New("env 'RABBITMQ_DEFAULT_USER' was empty")
 	}
-	rabbitPass = os.Getenv("RABBITMQ_PASS")
+	rabbitPass = os.Getenv("RABBITMQ_DEFAULT_PASS")
 	if rabbitPass == "" {
-		return errors.New("env 'RABBITMQ_PASS' was empty")
+		return errors.New("env 'RABBITMQ_DEFAULT_PASS' was empty")
 	}
 	rabbitHost = os.Getenv("RABBITMQ_HOST")
 	if rabbitHost == "" {
