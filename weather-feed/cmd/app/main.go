@@ -47,8 +47,6 @@ func initializeApp() (*app.App, error) {
 		reader = citiesreader.NewReader()
 	}
 
-	log.Print("PPPPPPPPPPPPPPPPPPPPPPPPPPPPP", &reader)
-
 	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitUser, rabbitPass, rabbitHost, rabbitPort)
 	cityData := make(chan internal.CityWeatherData)
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
