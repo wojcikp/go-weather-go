@@ -1,16 +1,17 @@
 #!/bin/bash
-# Start ClickHouse server in the background
-clickhouse-server --daemon
 
-# Wait for the server to start
-sleep 5
+clickhouse-client --user="$CLICKHOUSE_USER" --password="$CLICKHOUSE_PASSWORD" --query="
+CREATE TABLE IF NOT EXISTS weather_database.weather_scores (
+    city String,
+    time DateTime,
+    temperature Float64,
+    wind_speed Float64,
+    weather_code Int64
+) ENGINE = ReplacingMergeTree
+PRIMARY KEY (city, time)
+ORDER BY (city, time)
+SETTINGS index_granularity = 8192;
+"
 
-# Load the schema from schema.sql
-clickhouse-client --multiquery < /docker-entrypoint-initdb.d/schema.sql
+clickhouse-client --user="$CLICKHOUSE_USER" --password="$CLICKHOUSE_PASSWORD" --query="INSERT INTO weather_database.weather_scores FORMAT TSV" < /docker-entrypoint-initdb.d/data.tsv
 
-# Load the data from data.tsv
-# Replace `your_table_name` with the actual table name in ClickHouse
-clickhouse-client --query="INSERT INTO weather_scores FORMAT TSV" < /docker-entrypoint-initdb.d/data.tsv
-
-# Keep the container running
-tail -f /dev/null
