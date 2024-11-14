@@ -13,7 +13,7 @@ type Configuration struct {
 	MockCityInput        bool
 }
 
-const configPath = "../../config/config.json"
+const configPath = "/app/config/config.json"
 
 func GetConfig() (Configuration, error) {
 	configuration := Configuration{}
