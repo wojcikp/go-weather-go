@@ -22,23 +22,6 @@ func NewClickhouseClient(db, table string) *ClickhouseClient {
 	return &ClickhouseClient{db, table}
 }
 
-func (c ClickhouseClient) CreateWeatherTable() {
-	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s
-	(
-		city String NOT NULL,
-		time DateTime NOT NULL,
-		temperature Float64,
-		wind_speed Float64,
-		weather_code Int64
-	)
-	ENGINE = ReplacingMergeTree
-	PRIMARY KEY (city, time)`, c.db, c.table)
-	err := c.ExecQueryDb(q)
-	if err != nil {
-		log.Fatalf("Creating table: %s in clickhouse db: %s failed due to following error: %v.\nexecuted query: %s", c.table, c.db, err, q)
-	}
-}
-
 func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 	if len(data.ErrorMsg) > 0 {
 		log.Printf(
