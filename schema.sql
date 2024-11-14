@@ -1,1 +1,0 @@
-CREATE TABLE weather_database.weather_scores\n(\n    `city` String,\n    `time` DateTime,\n    `temperature` Float64,\n    `wind_speed` Float64,\n    `weather_code` Int64\n)\nENGINE = ReplacingMergeTree\nPRIMARY KEY (city, time)\nORDER BY (city, time)\nSETTINGS index_granularity = 8192
