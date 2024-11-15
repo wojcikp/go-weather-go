@@ -3,6 +3,7 @@ package citiesreader
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path"
 
@@ -38,12 +39,17 @@ func NewReaderMock() ICityReader {
 }
 
 func (r CitiesReader) Read() ([]CityInput, error) {
-	// dir, err := os.Getwd()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	p := path.Join("/app", "assets", "pl172.json")
-	// p := path.Join(dir, "..", "..", "assets", "pl172.json")
+	var p string
+	log.Print(os.Getenv("PRODUCTION") == "1")
+	if os.Getenv("PRODUCTION") == "1" {
+		p = path.Join("/app", "assets", "pl172.json")
+	} else {
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		p = path.Join(dir, "..", "..", "assets", "pl172.json")
+	}
 	file, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err

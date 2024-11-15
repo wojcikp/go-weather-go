@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/lpernett/godotenv"
 	"github.com/wojcikp/go-weather-go/weather-hub/internal/app"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
@@ -26,10 +27,11 @@ func main() {
 }
 
 func initializeApp() (*app.App, error) {
-	// err := godotenv.Load("../../.env")
-	// if err != nil {
-	// 	return &app.App{}, fmt.Errorf("error loading .env file, err: %w", err)
-	// }
+	if os.Getenv("PRODUCTION") != "1" {
+		if err := godotenv.Load("../../.env"); err != nil {
+			return &app.App{}, fmt.Errorf("error loading .env file, err: %w", err)
+		}
+	}
 	err := setEnvs()
 	if err != nil {
 		return &app.App{}, fmt.Errorf("setting env variables error: %w", err)

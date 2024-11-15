@@ -13,6 +13,7 @@ services:
       - RABBITMQ_DEFAULT_USER=user1
       - RABBITMQ_DEFAULT_PASS=pass1
       - RABBITMQ_QUEUE=queue1
+      - PRODUCTION=1
 
   weather-hub:
     build:
@@ -36,6 +37,7 @@ services:
       - CLICKHOUSE_PASS=pass1
       - CLICKHOUSE_DB=weather_database
       - CLICKHOUSE_TABLE=weather_scores
+      - PRODUCTION=1
 
   rabbitmq:
     image: rabbitmq:3-management

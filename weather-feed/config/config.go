@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/tkanos/gonfig"
 )
@@ -13,12 +14,18 @@ type Configuration struct {
 	MockCityInput        bool
 }
 
-const configPath = "/app/config/config.json"
-
 func GetConfig() (Configuration, error) {
 	configuration := Configuration{}
-	if err := gonfig.GetConf(configPath, &configuration); err != nil {
+	if err := gonfig.GetConf(getConfigPath(), &configuration); err != nil {
 		return Configuration{}, fmt.Errorf("could not read config file, err: %w", err)
 	}
 	return configuration, nil
+}
+
+func getConfigPath() string {
+	if os.Getenv("PRODUCTION") == "1" {
+		return "/app/config/config.json"
+	} else {
+		return "../../config/config.json"
+	}
 }
