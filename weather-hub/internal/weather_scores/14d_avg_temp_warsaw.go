@@ -27,7 +27,7 @@ func (wc *AvgTemperatureWarsaw14d[ScoreValue]) GetQuery() (string, error) {
 		`SELECT
     		city,
     		avg(temperature) AS avg_temp
-		FROM %s.%s
+		FROM %s.%s FINAL
 		WHERE (time >= '%s 00:00:00') AND (time <= '%s 00:00:00') AND (city = 'Warsaw')
 		GROUP BY city`,
 		db,
