@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/lpernett/godotenv"
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
@@ -27,13 +28,18 @@ func main() {
 }
 
 func initializeApp() (*app.App, error) {
-	if os.Getenv("PRODUCTION") != "1" {
+	prod, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
+	if err != nil {
+		log.Print("os env PRODUCTION not found. running local development mode.")
+		prod = false
+	}
+	if !prod {
 		if err := godotenv.Load("../../.env"); err != nil {
 			return &app.App{}, fmt.Errorf("error loading .env file, err: %w", err)
 		}
 	}
 
-	err := setEnvs()
+	err = setEnvs()
 	if err != nil {
 		return &app.App{}, fmt.Errorf("setting env variables error: %w", err)
 	}

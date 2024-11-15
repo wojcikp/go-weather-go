@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 )
@@ -39,9 +40,13 @@ func NewReaderMock() ICityReader {
 }
 
 func (r CitiesReader) Read() ([]CityInput, error) {
+	prod, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
+	if err != nil {
+		log.Print("os env PRODUCTION not found. setting local development mode.")
+		prod = false
+	}
 	var p string
-	log.Print(os.Getenv("PRODUCTION") == "1")
-	if os.Getenv("PRODUCTION") == "1" {
+	if prod {
 		p = path.Join("/app", "assets", "pl172.json")
 	} else {
 		dir, err := os.Getwd()

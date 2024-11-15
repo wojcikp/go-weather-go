@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/tkanos/gonfig"
 )
@@ -23,7 +24,11 @@ func GetConfig() (Configuration, error) {
 }
 
 func getConfigPath() string {
-	if os.Getenv("PRODUCTION") == "1" {
+	prod, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
+	if err != nil {
+		prod = false
+	}
+	if prod {
 		return "/app/config/config.json"
 	} else {
 		return "../../config/config.json"
