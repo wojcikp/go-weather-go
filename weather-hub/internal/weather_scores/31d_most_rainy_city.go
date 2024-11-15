@@ -47,8 +47,6 @@ func (wc *MostRainyCity31d[ScoreValue]) GetScore(dbClient IDbClient) (ScoreValue
 		return empty, err
 	}
 
-	log.Print(query)
-
 	results, err := wc.GetQueryResults(dbClient, query)
 	if err != nil {
 		log.Print("ERROR GetQueryResults: ", err)
