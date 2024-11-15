@@ -3,7 +3,6 @@ package citiesreader
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strconv"
@@ -42,7 +41,6 @@ func NewReaderMock() ICityReader {
 func (r CitiesReader) Read() ([]CityInput, error) {
 	prod, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
 	if err != nil {
-		log.Print("os env PRODUCTION not found. setting local development mode.")
 		prod = false
 	}
 	var p string
