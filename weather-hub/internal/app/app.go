@@ -38,7 +38,6 @@ func (app App) Run() {
 	done := make(chan struct{})
 	feedCounter := 0
 	var mu sync.Mutex
-	go app.clickhouseClient.CreateWeatherTable()
 	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 5; i++ {
 		go app.feedReceiver.HandleReceiveMessages(&feedCounter, &mu)
