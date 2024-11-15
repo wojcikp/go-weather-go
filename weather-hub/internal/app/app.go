@@ -37,7 +37,6 @@ func (app App) Run() {
 	log.Print("Waiting for messages. To exit press CTRL+C")
 	done := make(chan struct{})
 	var code int
-	go app.clickhouseClient.CreateWeatherTable()
 	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 100; i++ {
 		go app.feedReceiver.HandleReceiveMessages()

@@ -3,8 +3,10 @@ package citiesreader
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
 )
@@ -38,11 +40,21 @@ func NewReaderMock() ICityReader {
 }
 
 func (r CitiesReader) Read() ([]CityInput, error) {
-	dir, err := os.Getwd()
+	prod, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
 	if err != nil {
-		return nil, err
+		log.Print("os env PRODUCTION not found. setting local development mode.")
+		prod = false
 	}
-	p := path.Join(dir, "..", "..", "assets", "pl172.json")
+	var p string
+	if prod {
+		p = path.Join("/app", "assets", "pl172.json")
+	} else {
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		p = path.Join(dir, "..", "..", "assets", "pl172.json")
+	}
 	file, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
