@@ -22,7 +22,7 @@ func NewClickhouseClient(db, table string) *ClickhouseClient {
 	return &ClickhouseClient{db, table}
 }
 
-func (c ClickhouseClient) ProcessWeatherFeed(code *int, data internal.CityWeatherData) {
+func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 	conn, err := connect(c.db)
 	if err != nil {
 		log.Print("ERROR: ", err)

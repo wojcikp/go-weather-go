@@ -8,7 +8,7 @@ import (
 )
 
 type IWeatherFeedConsumer interface {
-	ProcessWeatherFeed(code *int, data internal.CityWeatherData)
+	ProcessWeatherFeed(data internal.CityWeatherData)
 }
 
 type Consumer struct {
@@ -19,13 +19,13 @@ func NewWeatherFeedConsumer(weatherFeed chan []byte) *Consumer {
 	return &Consumer{weatherFeed}
 }
 
-func (c Consumer) Work(code *int, done chan struct{}, wfc IWeatherFeedConsumer) {
+func (c Consumer) Work(done chan struct{}, wfc IWeatherFeedConsumer) {
 	for msg := range c.weatherFeed {
 		data := internal.CityWeatherData{}
 		if err := json.Unmarshal(msg, &data); err != nil {
 			log.Printf("ERROR: Unmarshalling data failed. Feed has not beed saved to db. error: %v", err)
 		}
-		wfc.ProcessWeatherFeed(code, data)
+		wfc.ProcessWeatherFeed(data)
 		done <- struct{}{}
 	}
 }

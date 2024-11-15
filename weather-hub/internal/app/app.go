@@ -36,15 +36,14 @@ func (app App) Run() {
 	log.Print("Weather hub app run")
 	log.Print("Waiting for messages. To exit press CTRL+C")
 	done := make(chan struct{})
-	var code int
 	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 100; i++ {
 		go app.feedReceiver.HandleReceiveMessages()
 	}
 	for i := 0; i < 1; i++ {
-		go app.feedConsumer.Work(&code, done, app.clickhouseClient)
+		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go processScores(app.server, app.reader, app.clickhouseClient, done, &code)
+	go processScores(app.server, app.reader, app.clickhouseClient, done)
 	forever := make(chan struct{})
 	<-forever
 }
@@ -54,7 +53,6 @@ func processScores(
 	reader scorereader.IScoreReader,
 	clickhouseClient *chclient.ClickhouseClient,
 	done chan struct{},
-	code *int,
 ) {
 	stringScores := weatherscores.GetScoresList[string]()
 	floatScores := weatherscores.GetScoresList[float64]()
@@ -64,7 +62,7 @@ func processScores(
 		for i := 0; i < feedLength-1; i++ {
 			<-done
 		}
-		log.Print("Processing scores...")
+		log.Print("Actual Scores:")
 		responseScoresInfo := []internal.ScoreInfo{}
 		errors := []error{}
 		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
@@ -80,8 +78,6 @@ func processScores(
 			}
 		}
 		publishScores(server, reader, responseScoresInfo)
-		fmt.Print(*code)
-		*code = 0
 	}
 }
 
