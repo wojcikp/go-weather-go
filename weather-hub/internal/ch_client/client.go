@@ -36,7 +36,6 @@ func (c ClickhouseClient) ProcessWeatherFeed(code *int, data internal.CityWeathe
 		)
 	} else {
 		var executeQueryErrors []error
-
 		for _, batch := range getBatchedQueries(data) {
 			stmt, err := conn.PrepareBatch(
 				context.Background(),
@@ -50,45 +49,9 @@ func (c ClickhouseClient) ProcessWeatherFeed(code *int, data internal.CityWeathe
 				if !ok {
 					executeQueryErrors = append(executeQueryErrors, err)
 				}
-				// if 2 == 2 {
-				// 	log.Print()
-				// }
 				if err := stmt.Append(query...); err != nil {
 					executeQueryErrors = append(executeQueryErrors, err)
 				}
-				name, ok := query[0].(string)
-				if !ok {
-					log.Print("EEEEEEEEEEEEEEEER: no name")
-				}
-				date, ok := query[1].(string)
-				if !ok {
-					log.Print("EEEEEEEEEEEEEEEER: no date")
-				}
-				parsedDate, err := time.Parse("2006-01-02 15:04:05", date)
-				if err != nil {
-					log.Print("parse date err: ", err)
-				}
-
-				// temp, ok := query[2].(float64)
-				// if !ok {
-				// 	log.Print("EEEEEEEEEEEEEEEER: no temp")
-				// }
-				// wind, ok := query[3].(float64)
-				// if !ok {
-				// 	log.Print("EEEEEEEEEEEEEEEER: no wind")
-				// }
-				c, ok := query[4].(int)
-				if !ok {
-					log.Print("EEEEEEEEEEEEEEEER: no weather codes")
-				}
-				if parsedDate.Before(time.Now()) && parsedDate.After(time.Now().AddDate(0, -1, 0)) && name == "Złotów" {
-					// fmt.Print(name)
-					fmt.Print(date)
-					// fmt.Print(temp)
-					// fmt.Print(wind)
-					fmt.Print(c)
-				}
-				*code += c
 			}
 			if err := stmt.Send(); err != nil {
 				executeQueryErrors = append(executeQueryErrors, err)
