@@ -37,10 +37,10 @@ func (app App) Run() {
 	log.Print("Waiting for messages. To exit press CTRL+C")
 	done := make(chan struct{})
 	go app.server.RunWeatherScoresServer()
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		go app.feedReceiver.HandleReceiveMessages()
 	}
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
 	go processScores(app.server, app.reader, app.clickhouseClient, done)
