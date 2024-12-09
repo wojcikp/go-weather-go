@@ -2,5 +2,5 @@
     "BaseUrl": "https://api.open-meteo.com/v1/forecast",
     "LookBackwardInMonths": -1,
     "ConsumerCount": 10,
-    "MockCityInput": true
+    "MockCityInput": false
 }
