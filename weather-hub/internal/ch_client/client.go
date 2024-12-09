@@ -2,6 +2,7 @@ package chclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -43,18 +44,22 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 			)
 			if err != nil {
 				executeQueryErrors = append(executeQueryErrors, err)
+				continue
 			}
 			for _, query := range batch {
 				query, ok := query.([]any)
 				if !ok {
-					executeQueryErrors = append(executeQueryErrors, err)
+					executeQueryErrors = append(executeQueryErrors,
+						errors.New("clickhouse execute query error: query parameters are not type of: []any"))
 				}
 				if err := stmt.Append(query...); err != nil {
 					executeQueryErrors = append(executeQueryErrors, err)
+					continue
 				}
 			}
 			if err := stmt.Send(); err != nil {
 				executeQueryErrors = append(executeQueryErrors, err)
+				continue
 			}
 		}
 		if len(executeQueryErrors) > 0 {
