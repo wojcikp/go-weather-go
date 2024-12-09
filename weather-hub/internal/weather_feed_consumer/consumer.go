@@ -25,7 +25,6 @@ func (c Consumer) Work(done chan struct{}, wfc IWeatherFeedConsumer) {
 		if err := json.Unmarshal(msg, &data); err != nil {
 			log.Printf("ERROR: Unmarshalling data failed. Feed has not beed saved to db. error: %v", err)
 		}
-		log.Printf("Processing data feed for city: %s", data.Name)
 		wfc.ProcessWeatherFeed(data)
 		done <- struct{}{}
 	}

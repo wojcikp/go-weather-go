@@ -2,8 +2,6 @@ package rabbitmqclient
 
 import (
 	"fmt"
-	"log"
-	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -18,7 +16,7 @@ func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
 	return &RabbitClient{queue, url, weatherFeed}
 }
 
-func (r RabbitClient) ReceiveMessages(feedCounter *int, mu *sync.Mutex) error {
+func (r RabbitClient) ReceiveMessages() error {
 	conn, err := amqp.Dial(r.url)
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
@@ -61,13 +59,9 @@ func (r RabbitClient) ReceiveMessages(feedCounter *int, mu *sync.Mutex) error {
 	go func() {
 		for data := range msgs {
 			r.weatherFeed <- data.Body
-			mu.Lock()
-			*feedCounter++
-			mu.Unlock()
 		}
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
 	return nil
 }

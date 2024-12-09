@@ -2,6 +2,7 @@ package chclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -23,6 +24,11 @@ func NewClickhouseClient(db, table string) *ClickhouseClient {
 }
 
 func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
+	conn, err := connect(c.db)
+	if err != nil {
+		log.Print("ERROR: ", err)
+	}
+	defer conn.Close()
 	if len(data.ErrorMsg) > 0 {
 		log.Printf(
 			"Weather data feed for following city: %s contains error: %s\nSkipping clickhouse insert based on this feed",
@@ -31,19 +37,29 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 		)
 	} else {
 		var executeQueryErrors []error
-		for i := 0; i < len(data.Time); i++ {
-			q := fmt.Sprintf(
-				"INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES ('%s', '%s', %f, %f, %d)",
-				c.db,
-				c.table,
-				data.Name,
-				data.Time[i].Format(time.DateTime),
-				data.Temperatures[i],
-				data.WindSpeed[i],
-				data.WeatherCodes[i],
+		for _, batch := range getBatchedQueries(data) {
+			stmt, err := conn.PrepareBatch(
+				context.Background(),
+				fmt.Sprintf("INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES", c.db, c.table),
 			)
-			if err := c.ExecQueryDb(q); err != nil {
+			if err != nil {
 				executeQueryErrors = append(executeQueryErrors, err)
+				continue
+			}
+			for _, query := range batch {
+				query, ok := query.([]any)
+				if !ok {
+					executeQueryErrors = append(executeQueryErrors,
+						errors.New("clickhouse execute query error: query parameters are not type of: []any"))
+				}
+				if err := stmt.Append(query...); err != nil {
+					executeQueryErrors = append(executeQueryErrors, err)
+					continue
+				}
+			}
+			if err := stmt.Send(); err != nil {
+				executeQueryErrors = append(executeQueryErrors, err)
+				continue
 			}
 		}
 		if len(executeQueryErrors) > 0 {
@@ -51,6 +67,29 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 		}
 		log.Printf("Processed data feed for city: %s", data.Name)
 	}
+}
+
+func getBatchedQueries(data internal.CityWeatherData) [][]any {
+	var batchedQueries [][]any
+	batchSize := 100
+	maxValue := len(data.Time) - 1
+
+	for i := 0; i <= maxValue; i += batchSize {
+		batch := make([]any, 0, batchSize)
+		for j := i; j < i+batchSize && j <= maxValue; j++ {
+
+			q := []any{
+				data.Name,
+				data.Time[j].Format(time.DateTime),
+				data.Temperatures[j],
+				data.WindSpeed[j],
+				data.WeatherCodes[j],
+			}
+			batch = append(batch, q)
+		}
+		batchedQueries = append(batchedQueries, batch)
+	}
+	return batchedQueries
 }
 
 func (c ClickhouseClient) ExecQueryDb(query string) error {

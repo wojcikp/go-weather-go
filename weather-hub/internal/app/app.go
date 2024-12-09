@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"sync"
 
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
@@ -35,17 +34,16 @@ func NewApp(
 
 func (app App) Run() {
 	log.Print("Weather hub app run")
+	log.Print("Waiting for messages. To exit press CTRL+C")
 	done := make(chan struct{})
-	feedCounter := 0
-	var mu sync.Mutex
 	go app.server.RunWeatherScoresServer()
-	for i := 0; i < 5; i++ {
-		go app.feedReceiver.HandleReceiveMessages(&feedCounter, &mu)
+	for i := 0; i < 10; i++ {
+		go app.feedReceiver.HandleReceiveMessages()
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
-	go processScores(app.server, app.reader, app.clickhouseClient, done, &feedCounter, &mu)
+	go processScores(app.server, app.reader, app.clickhouseClient, done)
 	forever := make(chan struct{})
 	<-forever
 }
@@ -55,17 +53,16 @@ func processScores(
 	reader scorereader.IScoreReader,
 	clickhouseClient *chclient.ClickhouseClient,
 	done chan struct{},
-	feedCounter *int,
-	mu *sync.Mutex,
 ) {
 	stringScores := weatherscores.GetScoresList[string]()
 	floatScores := weatherscores.GetScoresList[float64]()
+	const feedLength = 172
 	for {
 		<-done
-		for i := 0; i < *feedCounter-1; i++ {
+		for i := 0; i < feedLength-1; i++ {
 			<-done
 		}
-		log.Print("Processing scores...")
+		log.Print("Actual Scores:")
 		responseScoresInfo := []internal.ScoreInfo{}
 		errors := []error{}
 		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
@@ -81,9 +78,6 @@ func processScores(
 			}
 		}
 		publishScores(server, reader, responseScoresInfo)
-		mu.Lock()
-		*feedCounter = 0
-		mu.Unlock()
 	}
 }
 
