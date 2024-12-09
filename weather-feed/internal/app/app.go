@@ -37,7 +37,7 @@ func (app App) Run() {
 		log.Fatal(err)
 	}
 
-	const publishFeedInterval = 10 * time.Second
+	const publishFeedInterval = 20 * time.Second
 	go runProducers(app, cities, publishFeedInterval)
 
 	done := make(chan struct{})
