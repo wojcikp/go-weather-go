@@ -3,7 +3,6 @@ package weatherdataworkers
 import (
 	"context"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
@@ -23,8 +22,7 @@ func NewApiDataProducer(
 	return &ApiDataProducer{apiClient, CityData}
 }
 
-func (w ApiDataProducer) Work(ctx context.Context, city internal.BaseCityInfo, wg *sync.WaitGroup, sem *semaphore.Weighted) {
-	defer wg.Done()
+func (w ApiDataProducer) Work(ctx context.Context, city internal.BaseCityInfo, sem *semaphore.Weighted) {
 	defer sem.Release(1)
 	weatherData, err := w.apiClient.FetchData(ctx, city)
 	const maxRetries = 3

@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"log"
-	"sync"
+	"time"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
 	"github.com/wojcikp/go-weather-go/weather-feed/internal"
@@ -32,30 +32,43 @@ func NewApp(
 }
 
 func (app App) Run() {
-	ctx := context.Background()
 	cities, err := citiesreader.GetCitiesInput(app.reader)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	wgp := &sync.WaitGroup{}
-	sem := semaphore.NewWeighted(5)
-	for _, city := range cities {
-		wgp.Add(1)
-		go func(city internal.BaseCityInfo) {
-			sem.Acquire(ctx, 1)
-			app.producer.Work(ctx, city, wgp, sem)
-		}(city)
-	}
+	const publishFeedInterval = 10 * time.Second
+	go runProducers(app, cities, publishFeedInterval)
 
-	wgc := &sync.WaitGroup{}
+	done := make(chan struct{})
 	for i := 0; i < app.config.ConsumerCount; i++ {
-		wgc.Add(1)
-		go app.consumer.Work(wgc, app.rabbitPublisher)
+		go app.consumer.Work(done, app.rabbitPublisher)
 	}
 
-	wgp.Wait()
-	close(app.producer.CityData)
-	wgc.Wait()
-	log.Print("Weather feed published")
+	go func() {
+		for {
+			<-done
+			for i := 0; i < len(cities)-1; i++ {
+				<-done
+			}
+			log.Print("Published weather feed.")
+		}
+	}()
+
+	forever := make(chan struct{})
+	<-forever
+}
+
+func runProducers(app App, cities []internal.BaseCityInfo, publishFeedInterval time.Duration) {
+	ctx := context.Background()
+	sem := semaphore.NewWeighted(5)
+	for {
+		for _, city := range cities {
+			go func(city internal.BaseCityInfo) {
+				sem.Acquire(ctx, 1)
+				app.producer.Work(ctx, city, sem)
+			}(city)
+		}
+		<-time.After(publishFeedInterval)
+	}
 }
