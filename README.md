@@ -12,10 +12,10 @@ Po przeliczeniu wyniki są dostępne w formacie JSON pod adresem: **http://local
 
 ### Jak uruchomić aplikację
 Musisz posiadać zainstalowanego lokalnie Gita i Dockera. 
-1. Otwórz okno terminala i pobierz to repozytorium do dowolnej lokalizacji: 
+1. Otwórz okno terminala i pobierz to repozytorium do dowolnej lokalizacji:<br>
 `git clone https://github.com/wojcikp/go-weather-go.git`
 2. Przejdź do folderu z repozytorium: `cd go-weather-go`
-3. Uruchom aplikację przy pomocy docker-compose: `docker-compose up`
+3. Uruchom aplikację przy pomocy docker-compose: `docker-compose up`<br>
 *Zwróć uwagę, porty **5672, 15672, 9000 oraz 8081** nie mogą być zajęte na Twojej maszynie.*
 
 Gdy wszystkie elementy składowe się uruchomią, aplikacja uaktualni dane pogodowe w bazie i na nowo przeliczy wyniki. Dane na potrzeby demonstracji będą uaktualniane bardzo często, co 3 minuty. Przeliczone wyniki powinieneś móc zobaczyć pod adresem: **http://localhost:8081/scores**
@@ -33,10 +33,10 @@ The **weather-feed** module gathers weather data from an external API (open-mete
 After calculations are complete, the results are available in JSON format at: http://localhost:8081/scores.
 ### How to Run the App
 To run the app, ensure you have Git and Docker installed on your computer.
-1. Open a terminal and clone the repository to a directory of your choice:
+1. Open a terminal and clone the repository to a directory of your choice:<br>
 `git clone https://github.com/wojcikp/go-weather-go.git`
 2. Navigate to the newly created directory: `cd go-weather-go`
-3. Start the app using Docker Compose: `docker-compose up`
+3. Start the app using Docker Compose: `docker-compose up`<br>
 *Note: Ensure that ports **5672, 15672, 9000, and 8081** are available on your machine.*
 
 Once all components are running, the app will update the weather data in the database and recalculate the weather scores. For demonstration purposes, the weather data is updated frequently (every 3 minutes). The current weather scores can be accessed at: http://localhost:8081/scores.
