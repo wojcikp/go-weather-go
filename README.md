@@ -2,8 +2,7 @@
 
 PL<br>
 Aplikacja go-weather-go powstała w związku z moją chęcią do śledzenia danych pogodowych, co weszło mi ostatnio w nawyk. 
-Jest napisana w **Go** i podzielona na dwa moduły (**weather-feed** oraz **weather-app**), które komunikują się ze sobą przy pomocy brokera wiadomości (**RabbitMQ**), gdzie na kolejkę trafiają dane pogodowe ze 172 miast Polski. Dzieje się to przy pomocy modułu **weather-feed**. Moduł pozyskuje dane z zewnętrznego API (open-meteo.com). Następnie dane z kolejki są zczytywane przez moduł **weather-hub** i zasilają bazę danych (**ClickHouse**). W momencie gdy wszystkie dane z kolejki trafią do bazy, uruchomione zostaje przeliczanie danych pogodowych w określonych dla nich **oknach czasowych**
-Są to:
+Jest napisana w **Go** i podzielona na dwa moduły (**weather-feed** oraz **weather-app**), które komunikują się ze sobą przy pomocy brokera wiadomości (**RabbitMQ**), gdzie na kolejkę trafiają dane pogodowe ze 172 miast Polski. Dzieje się to przy pomocy modułu **weather-feed**. Moduł pozyskuje dane z zewnętrznego API (open-meteo.com). Następnie dane z kolejki są zczytywane przez moduł **weather-hub** i zasilają bazę danych (**ClickHouse**). W momencie gdy wszystkie dane z kolejki trafią do bazy, uruchomione zostaje przeliczanie danych pogodowych w określonych dla nich **oknach czasowych**. Są to:
  - miasto z najwyższą średnią temperaturą w ostatnim tygodniu
  - najbardziej deszczowe miasto w ostatnim tygodniu
  - najbardziej deszczowe miasto w ostatnim miesiącu
