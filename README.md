@@ -1,6 +1,6 @@
 ## GO-WEATHER-GO APP
 
-PL
+PL<br>
 Aplikacja go-weather-go powstała w związku z moją chęcią do śledzenia danych pogodowych, co weszło mi ostatnio w nawyk. 
 Jest napisana w **Go** i podzielona na dwa moduły (**weather-feed** oraz **weather-app**), które komunikują się ze sobą przy pomocy brokera wiadomości (**RabbitMQ**), gdzie na kolejkę trafiają dane pogodowe ze 172 miast Polski. Dzieje się to przy pomocy modułu **weather-feed**. Moduł pozyskuje dane z zewnętrznego API (open-meteo.com). Następnie dane z kolejki są zczytywane przez moduł **weather-hub** i zasilają bazę danych (**ClickHouse**). W momencie gdy wszystkie dane z kolejki trafią do bazy, uruchomione zostaje przeliczanie danych pogodowych w określonych dla nich **oknach czasowych** Są to:
  - miasto z najwyższą średnią temperaturą w ostatnim tygodniu
@@ -21,7 +21,7 @@ Musisz posiadać zainstalowanego lokalnie Gita i Dockera.
 Gdy wszystkie elementy składowe się uruchomią, aplikacja uaktualni dane pogodowe w bazie i na nowo przeliczy wyniki. Dane na potrzeby demonstracji będą uaktualniane bardzo często, co 3 minuty. Przeliczone wyniki powinieneś móc zobaczyć pod adresem: **http://localhost:8081/scores**
 <br>
 
-EN
+EN<br>
 The **go-weather-go** app was created due to my recent habit of tracking weather forecasts and historical weather data. It is written in the **Go** programming language and consists of two main modules: **weather-feed** and **weather-app**, which communicate via the **RabbitMQ** message broker.
 
 The **weather-feed** module gathers weather data from an external API (open-meteo.com) for 172 cities in Poland and sends it to a **RabbitMQ queue**. The **weather-app** module then collects this data from the queue and inserts it into a **ClickHouse database**. Once all data from the queue has been loaded into the database, the module recalculates **weather scores** for specific time periods. These scores are preset and updated regularly. They include:
