@@ -31,7 +31,7 @@ func (w ApiDataProducer) Work(ctx context.Context, city internal.BaseCityInfo) {
 		log.Printf("ERROR: Data for city: %s not fetched, err: %v\nRetrying...", city.Name, err)
 		time.Sleep(time.Second * time.Duration(i+1))
 		weatherData, err = w.apiClient.FetchData(ctx, city)
-		if i == maxRetries-1 {
+		if i == maxRetries-1 && err != nil {
 			log.Printf("ERROR: Last attempt to fetch data for city: %s failed. Putting on queue empty data for this city.", city.Name)
 			w.CityData <- internal.CityWeatherData{
 				Name:         city.Name,
