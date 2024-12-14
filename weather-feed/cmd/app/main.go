@@ -46,7 +46,7 @@ func initializeApp() (*app.App, error) {
 
 	config, err := config.GetConfig()
 	if err != nil {
-		return &app.App{}, nil
+		return &app.App{}, fmt.Errorf("reading config file error: %w", err)
 	}
 
 	var reader citiesreader.ICityReader
@@ -57,9 +57,14 @@ func initializeApp() (*app.App, error) {
 	}
 
 	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitUser, rabbitPass, rabbitHost, rabbitPort)
+	rabbitClient, err := rabbitmqpublisher.NewRabbitPublisher(rabbitQueue, rabbitUrl)
+
+	if err != nil {
+		return &app.App{}, fmt.Errorf("creating rabbit publisher error: %w", err)
+	}
+
 	cityData := make(chan internal.CityWeatherData)
 	apiClient := apiclient.NewApiClient(config.BaseUrl, config.LookBackwardInMonths)
-	rabbitClient := rabbitmqpublisher.NewRabbitPublisher(rabbitQueue, rabbitUrl)
 	producer := weatherdataworkers.NewApiDataProducer(*apiClient, cityData)
 	consumer := weatherdataworkers.NewWeatherDataConsumer(cityData)
 
