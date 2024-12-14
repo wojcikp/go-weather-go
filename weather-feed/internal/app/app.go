@@ -72,7 +72,8 @@ func runProducers(ctx context.Context, app App, cities []internal.BaseCityInfo, 
 		for _, city := range cities {
 			go func(city internal.BaseCityInfo) {
 				sem.Acquire(ctx, 1)
-				app.producer.Work(ctx, city, sem)
+				app.producer.Work(ctx, city)
+				sem.Release(1)
 			}(city)
 		}
 		<-time.After(publishFeedInterval)
