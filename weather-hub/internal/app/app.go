@@ -9,14 +9,13 @@ import (
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
-	weatherfeedreceiver "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_receiver"
 	weatherscores "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_scores"
 	webserver "github.com/wojcikp/go-weather-go/weather-hub/internal/web_server"
 )
 
 type App struct {
 	clickhouseClient *chclient.ClickhouseClient
-	feedReceiver     *weatherfeedreceiver.FeedReceiver
+	feedReceiver     internal.IFeedReceiver
 	feedConsumer     *weatherfeedconsumer.Consumer
 	reader           scorereader.IScoreReader
 	server           *webserver.ScoresServer
@@ -24,7 +23,7 @@ type App struct {
 
 func NewApp(
 	clickhouseClient *chclient.ClickhouseClient,
-	feedReceiver *weatherfeedreceiver.FeedReceiver,
+	feedReceiver internal.IFeedReceiver,
 	feedConsumer *weatherfeedconsumer.Consumer,
 	reader scorereader.IScoreReader,
 	server *webserver.ScoresServer,
@@ -38,7 +37,7 @@ func (app App) Run() {
 	done := make(chan struct{})
 	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 10; i++ {
-		go app.feedReceiver.HandleReceiveMessages()
+		go app.feedReceiver.ReceiveMessages()
 	}
 	for i := 0; i < 10; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
