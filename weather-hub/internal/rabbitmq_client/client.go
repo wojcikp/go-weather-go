@@ -55,7 +55,7 @@ func (r RabbitClient) ReceiveMessages() {
 	if err != nil {
 		r.weatherFeed <- internal.FeedStream{
 			Data: []byte{},
-			Err:  fmt.Errorf("failed to register a consumer, err: %w", err)}
+			Err:  fmt.Errorf("failed to register a  rabbit consumer, err: %w", err)}
 	}
 
 	forever := make(chan struct{})

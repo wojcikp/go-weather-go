@@ -2,8 +2,11 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
+	"os/signal"
+	"syscall"
 
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
@@ -34,6 +37,10 @@ func NewApp(
 func (app App) Run() {
 	log.Print("Weather hub app run")
 	log.Print("Waiting for messages. To exit press CTRL+C")
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	done := make(chan struct{})
 	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 10; i++ {
@@ -43,8 +50,9 @@ func (app App) Run() {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
 	go processScores(app.server, app.reader, app.clickhouseClient, done)
-	forever := make(chan struct{})
-	<-forever
+
+	<-ctx.Done()
+	log.Print("Weather hub shutdown signal received, job finished.")
 }
 
 func processScores(
