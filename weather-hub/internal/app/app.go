@@ -57,8 +57,7 @@ func processScores(
 	floatScores := weatherscores.GetScoresList[float64]()
 	const feedLength = 172
 	for {
-		<-done
-		for i := 0; i < feedLength-1; i++ {
+		for i := 0; i < feedLength; i++ {
 			<-done
 		}
 		log.Print("Actual Scores:")
