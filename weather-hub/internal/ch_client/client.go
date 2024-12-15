@@ -35,38 +35,38 @@ func (c ClickhouseClient) ProcessWeatherFeed(data internal.CityWeatherData) {
 			data.Name,
 			data.ErrorMsg,
 		)
-	} else {
-		var executeQueryErrors []error
-		for _, batch := range getBatchedQueries(data) {
-			stmt, err := conn.PrepareBatch(
-				context.Background(),
-				fmt.Sprintf("INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES", c.db, c.table),
-			)
-			if err != nil {
-				executeQueryErrors = append(executeQueryErrors, err)
-				continue
-			}
-			for _, query := range batch {
-				query, ok := query.([]any)
-				if !ok {
-					executeQueryErrors = append(executeQueryErrors,
-						errors.New("clickhouse execute query error: query parameters are not type of: []any"))
-				}
-				if err := stmt.Append(query...); err != nil {
-					executeQueryErrors = append(executeQueryErrors, err)
-					continue
-				}
-			}
-			if err := stmt.Send(); err != nil {
-				executeQueryErrors = append(executeQueryErrors, err)
-				continue
-			}
-		}
-		if len(executeQueryErrors) > 0 {
-			log.Printf("ERROR: Processing weather feed for city: %s failed. Errors: %v", data.Name, executeQueryErrors)
-		}
-		log.Printf("Processed data feed for city: %s", data.Name)
+		return
 	}
+	var executeQueryErrors []error
+	for _, batch := range getBatchedQueries(data) {
+		stmt, err := conn.PrepareBatch(
+			context.Background(),
+			fmt.Sprintf("INSERT INTO %s.%s (city, time, temperature, wind_speed, weather_code) VALUES", c.db, c.table),
+		)
+		if err != nil {
+			executeQueryErrors = append(executeQueryErrors, err)
+			continue
+		}
+		for _, query := range batch {
+			query, ok := query.([]any)
+			if !ok {
+				executeQueryErrors = append(executeQueryErrors,
+					errors.New("clickhouse execute query error: query parameters are not type of: []any"))
+			}
+			if err := stmt.Append(query...); err != nil {
+				executeQueryErrors = append(executeQueryErrors, err)
+				continue
+			}
+		}
+		if err := stmt.Send(); err != nil {
+			executeQueryErrors = append(executeQueryErrors, err)
+			continue
+		}
+	}
+	if len(executeQueryErrors) > 0 {
+		log.Printf("ERROR: Processing weather feed for city: %s failed. Errors: %v", data.Name, executeQueryErrors)
+	}
+	log.Printf("Processed data feed for city: %s", data.Name)
 }
 
 func getBatchedQueries(data internal.CityWeatherData) [][]any {
