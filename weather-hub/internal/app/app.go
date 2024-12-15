@@ -62,10 +62,10 @@ func processScores(
 			<-done
 		}
 		log.Print("Actual Scores:")
-		responseScoresInfo := []internal.ScoreInfo{}
-		errors := []error{}
 		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
 		floatScoresInfo, floatErrors := weatherscores.GetScoresInfo(floatScores, clickhouseClient)
+		responseScoresInfo := make([]internal.ScoreInfo, 0, len(stringScoresInfo)+len(floatScoresInfo))
+		errors := []error{}
 		responseScoresInfo = append(responseScoresInfo, stringScoresInfo...)
 		responseScoresInfo = append(responseScoresInfo, floatScoresInfo...)
 		errors = append(errors, stringErrors...)
