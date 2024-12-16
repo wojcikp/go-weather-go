@@ -18,3 +18,12 @@ type ScoreInfo struct {
 	Name  string
 	Value string
 }
+
+type FeedStream struct {
+	Data []byte
+	Err  error
+}
+
+type IFeedReceiver interface {
+	ReceiveMessages()
+}

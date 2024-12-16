@@ -8,12 +8,12 @@ import (
 	"strconv"
 
 	"github.com/lpernett/godotenv"
+	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 	"github.com/wojcikp/go-weather-go/weather-hub/internal/app"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	rabbitmqclient "github.com/wojcikp/go-weather-go/weather-hub/internal/rabbitmq_client"
 	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
-	weatherfeedreceiver "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_receiver"
 	webserver "github.com/wojcikp/go-weather-go/weather-hub/internal/web_server"
 )
 
@@ -39,19 +39,20 @@ func initializeApp() (*app.App, error) {
 		}
 	}
 
-	err = setEnvs()
-	if err != nil {
+	if err = setEnvs(); err != nil {
 		return &app.App{}, fmt.Errorf("setting env variables error: %w", err)
 	}
-	weatherFeed := make(chan []byte)
+	weatherFeed := make(chan internal.FeedStream)
 	rabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitUser, rabbitPass, rabbitHost, rabbitPort)
-	rabbit := rabbitmqclient.NewRabbitClient(rabbitQueue, rabbitUrl, weatherFeed)
+	rabbit, err := rabbitmqclient.NewRabbitClient(rabbitQueue, rabbitUrl, weatherFeed)
+	if err != nil {
+		return &app.App{}, fmt.Errorf("creating rabbit client error: %w", err)
+	}
 	clickhouse := chclient.NewClickhouseClient(clickhouseDb, clickhouseTable)
-	receiver := weatherfeedreceiver.NewFeedReceiver(rabbit)
 	consumer := weatherfeedconsumer.NewWeatherFeedConsumer(weatherFeed)
 	reader := scorereader.NewConsoleScoreReader()
 	server := webserver.NewScoresServer()
-	return app.NewApp(clickhouse, receiver, consumer, reader, server), nil
+	return app.NewApp(clickhouse, rabbit, consumer, reader, server), nil
 }
 
 func setEnvs() error {

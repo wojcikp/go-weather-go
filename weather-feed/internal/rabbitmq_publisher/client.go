@@ -9,48 +9,49 @@ import (
 )
 
 type RabbitPublisher struct {
-	queue string
-	url   string
+	queue   amqp.Queue
+	channel *amqp.Channel
+	conn    *amqp.Connection
+	url     string
 }
 
-func NewRabbitPublisher(queue, url string) *RabbitPublisher {
-	return &RabbitPublisher{queue, url}
-}
-
-func (r RabbitPublisher) ProcessWeatherData(msg []byte) error {
-	conn, err := amqp.Dial(r.url)
+func NewRabbitPublisher(queueName, url string) (*RabbitPublisher, error) {
+	conn, err := amqp.Dial(url)
 	if err != nil {
-		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
+		return nil, fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
 	}
-	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		return fmt.Errorf("failed to open a channel, err: %w", err)
+		conn.Close()
+		return nil, fmt.Errorf("failed to open a channel, err: %w", err)
 	}
-	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		r.queue, // name
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		queueName, // name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		nil,       // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("failed to declare a queue, err: %w", err)
+		conn.Close()
+		return nil, fmt.Errorf("failed to declare a queue, err: %w", err)
 	}
+	return &RabbitPublisher{q, ch, conn, url}, nil
+}
 
+func (r RabbitPublisher) ProcessWeatherData(msg []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = ch.PublishWithContext(
+	err := r.channel.PublishWithContext(
 		ctx,
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
+		"",           // exchange
+		r.queue.Name, // routing key
+		false,        // mandatory
+		false,        // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(msg),
@@ -58,6 +59,18 @@ func (r RabbitPublisher) ProcessWeatherData(msg []byte) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to publish a message, err: %w", err)
+	}
+
+	return nil
+}
+
+func (r *RabbitPublisher) Close() error {
+	if err := r.channel.Close(); err != nil {
+		return fmt.Errorf("failed to close channel, err: %w", err)
+	}
+
+	if err := r.conn.Close(); err != nil {
+		return fmt.Errorf("failed to close connection, err: %w", err)
 	}
 
 	return nil

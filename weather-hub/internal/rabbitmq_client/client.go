@@ -4,64 +4,67 @@ import (
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 )
 
 type RabbitClient struct {
-	queue       string
 	url         string
-	weatherFeed chan []byte
+	queue       amqp.Queue
+	channel     *amqp.Channel
+	conn        *amqp.Connection
+	weatherFeed chan internal.FeedStream
 }
 
-func NewRabbitClient(queue, url string, weatherFeed chan []byte) *RabbitClient {
-	return &RabbitClient{queue, url, weatherFeed}
-}
-
-func (r RabbitClient) ReceiveMessages() error {
-	conn, err := amqp.Dial(r.url)
+func NewRabbitClient(queueName, url string, weatherFeed chan internal.FeedStream) (*RabbitClient, error) {
+	conn, err := amqp.Dial(url)
 	if err != nil {
-		return fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
+		return nil, fmt.Errorf("failed to connect to RabbitMQ, err: %w", err)
 	}
-	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		return fmt.Errorf("failed to open a channel, err: %w", err)
+		conn.Close()
+		return nil, fmt.Errorf("failed to open a channel, err: %w", err)
 	}
-	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		r.queue, // name
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		queueName, // name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		nil,       // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("failed to declare a queue, err: %w", err)
+		conn.Close()
+		return nil, fmt.Errorf("failed to declare a queue, err: %w", err)
 	}
+	return &RabbitClient{url, q, ch, conn, weatherFeed}, nil
+}
 
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+func (r RabbitClient) ReceiveMessages() {
+	msgs, err := r.channel.Consume(
+		r.queue.Name, // queue
+		"",           // consumer
+		true,         // auto-ack
+		false,        // exclusive
+		false,        // no-local
+		false,        // no-wait
+		nil,          // args
 	)
 	if err != nil {
-		return fmt.Errorf("failed to register a consumer, err: %w", err)
+		r.weatherFeed <- internal.FeedStream{
+			Data: []byte{},
+			Err:  fmt.Errorf("failed to register a  rabbit consumer, err: %w", err)}
 	}
 
 	forever := make(chan struct{})
 
 	go func() {
 		for data := range msgs {
-			r.weatherFeed <- data.Body
+			r.weatherFeed <- internal.FeedStream{Data: data.Body, Err: nil}
 		}
 	}()
 
 	<-forever
-	return nil
 }

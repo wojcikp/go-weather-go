@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"log"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/wojcikp/go-weather-go/weather-feed/config"
@@ -32,13 +34,16 @@ func NewApp(
 }
 
 func (app App) Run() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	cities, err := citiesreader.GetCitiesInput(app.reader)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	const publishFeedInterval = 3 * time.Minute
-	go runProducers(app, cities, publishFeedInterval)
+	go runProducers(ctx, app, cities, publishFeedInterval)
 
 	done := make(chan struct{})
 	for i := 0; i < app.config.ConsumerCount; i++ {
@@ -47,26 +52,28 @@ func (app App) Run() {
 
 	go func() {
 		for {
-			<-done
-			for i := 0; i < len(cities)-1; i++ {
+			for i := 0; i < len(cities); i++ {
 				<-done
 			}
 			log.Print("Published weather feed.")
 		}
 	}()
 
-	forever := make(chan struct{})
-	<-forever
+	<-ctx.Done()
+	if err := app.rabbitPublisher.Close(); err != nil {
+		log.Print("rabbit publisher close error: ", err)
+	}
+	log.Print("Weather feed shutdown signal received, job finished.")
 }
 
-func runProducers(app App, cities []internal.BaseCityInfo, publishFeedInterval time.Duration) {
-	ctx := context.Background()
+func runProducers(ctx context.Context, app App, cities []internal.BaseCityInfo, publishFeedInterval time.Duration) {
 	sem := semaphore.NewWeighted(5)
 	for {
 		for _, city := range cities {
 			go func(city internal.BaseCityInfo) {
 				sem.Acquire(ctx, 1)
-				app.producer.Work(ctx, city, sem)
+				app.producer.Work(ctx, city)
+				sem.Release(1)
 			}(city)
 		}
 		<-time.After(publishFeedInterval)

@@ -2,21 +2,23 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
+	"os/signal"
+	"syscall"
 
 	"github.com/wojcikp/go-weather-go/weather-hub/internal"
 	chclient "github.com/wojcikp/go-weather-go/weather-hub/internal/ch_client"
 	scorereader "github.com/wojcikp/go-weather-go/weather-hub/internal/score_reader"
 	weatherfeedconsumer "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_consumer"
-	weatherfeedreceiver "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_feed_receiver"
 	weatherscores "github.com/wojcikp/go-weather-go/weather-hub/internal/weather_scores"
 	webserver "github.com/wojcikp/go-weather-go/weather-hub/internal/web_server"
 )
 
 type App struct {
 	clickhouseClient *chclient.ClickhouseClient
-	feedReceiver     *weatherfeedreceiver.FeedReceiver
+	feedReceiver     internal.IFeedReceiver
 	feedConsumer     *weatherfeedconsumer.Consumer
 	reader           scorereader.IScoreReader
 	server           *webserver.ScoresServer
@@ -24,7 +26,7 @@ type App struct {
 
 func NewApp(
 	clickhouseClient *chclient.ClickhouseClient,
-	feedReceiver *weatherfeedreceiver.FeedReceiver,
+	feedReceiver internal.IFeedReceiver,
 	feedConsumer *weatherfeedconsumer.Consumer,
 	reader scorereader.IScoreReader,
 	server *webserver.ScoresServer,
@@ -35,17 +37,22 @@ func NewApp(
 func (app App) Run() {
 	log.Print("Weather hub app run")
 	log.Print("Waiting for messages. To exit press CTRL+C")
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	done := make(chan struct{})
 	go app.server.RunWeatherScoresServer()
 	for i := 0; i < 10; i++ {
-		go app.feedReceiver.HandleReceiveMessages()
+		go app.feedReceiver.ReceiveMessages()
 	}
 	for i := 0; i < 10; i++ {
 		go app.feedConsumer.Work(done, app.clickhouseClient)
 	}
 	go processScores(app.server, app.reader, app.clickhouseClient, done)
-	forever := make(chan struct{})
-	<-forever
+
+	<-ctx.Done()
+	log.Print("Weather hub shutdown signal received, job finished.")
 }
 
 func processScores(
@@ -58,15 +65,14 @@ func processScores(
 	floatScores := weatherscores.GetScoresList[float64]()
 	const feedLength = 172
 	for {
-		<-done
-		for i := 0; i < feedLength-1; i++ {
+		for i := 0; i < feedLength; i++ {
 			<-done
 		}
 		log.Print("Actual Scores:")
-		responseScoresInfo := []internal.ScoreInfo{}
-		errors := []error{}
 		stringScoresInfo, stringErrors := weatherscores.GetScoresInfo(stringScores, clickhouseClient)
 		floatScoresInfo, floatErrors := weatherscores.GetScoresInfo(floatScores, clickhouseClient)
+		responseScoresInfo := make([]internal.ScoreInfo, 0, len(stringScoresInfo)+len(floatScoresInfo))
+		errors := []error{}
 		responseScoresInfo = append(responseScoresInfo, stringScoresInfo...)
 		responseScoresInfo = append(responseScoresInfo, floatScoresInfo...)
 		errors = append(errors, stringErrors...)
